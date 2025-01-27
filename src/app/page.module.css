@@ -8,3 +8,8 @@
   top: 20px;
   right: 20px;
 }
+
+.checkboxes {
+  display: grid;
+  gap: 1px;
+}

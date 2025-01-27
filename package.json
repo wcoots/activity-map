@@ -10,12 +10,14 @@
   },
   "dependencies": {
     "@mapbox/polyline": "^1.2.1",
+    "antd": "^5.23.2",
     "mapbox-gl": "^3.9.3",
     "next": "15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "@eslint/eslintrc": "^3",
     "@types/mapbox__polyline": "^1.0.5",
     "@types/node": "^20",
