@@ -9,6 +9,7 @@ import "@ant-design/v5-patch-for-react-19";
 import { SettingFilled } from "@ant-design/icons";
 import {
   Button,
+  Card,
   Checkbox,
   ColorPicker as ColourPicker,
   DatePicker,
@@ -28,6 +29,7 @@ interface Activity {
   movingTime: number;
   elapsedTime: number;
   totalElevationGain: number;
+  averageSpeed: number;
   type: ActivityType;
   startDate: Date;
   positions: LngLat[];
@@ -35,11 +37,17 @@ interface Activity {
 
 const ACTIVITY_SOURCE = "activity-source";
 const ACTIVITY_LAYER = "activity-layer";
+const SELECTED_ACTIVITY_LAYER = "selected-activity-layer";
+
+const INTERACTIVE_LAYERS = [ACTIVITY_LAYER, SELECTED_ACTIVITY_LAYER];
 
 export default function Home() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<Map | null>(null);
 
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
+    null
+  );
   const [activities, setActivities] = useState<Activity[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activityTypeSettings, setActivityTypeSettings] = useState(
@@ -90,10 +98,56 @@ export default function Home() {
         map.current.addLayer({
           id: ACTIVITY_LAYER,
           source: ACTIVITY_SOURCE,
+          filter: ["==", ["get", "selected"], false],
           type: "line",
           paint: { "line-color": ["get", "colour"], "line-width": 3 },
         });
       }
+
+      if (!map.current.getLayer(SELECTED_ACTIVITY_LAYER)) {
+        map.current.addLayer({
+          id: SELECTED_ACTIVITY_LAYER,
+          source: ACTIVITY_SOURCE,
+          filter: ["==", ["get", "selected"], true],
+          type: "line",
+          paint: {
+            "line-color": ["get", "colour"],
+            "line-width": 4,
+            "line-border-color": "white",
+            "line-border-width": 1,
+          },
+        });
+      }
+
+      map.current.on("click", (e) => {
+        if (!map.current) return;
+
+        const features = map.current.queryRenderedFeatures(e.point, {
+          layers: INTERACTIVE_LAYERS,
+        });
+
+        if (!features?.length) {
+          setSelectedActivity(null);
+          return;
+        }
+
+        const [topFeature] = features;
+        if (topFeature.properties?.id) {
+          const activity = activities.find(
+            (activity) => activity.id === topFeature.properties!.id
+          );
+
+          if (activity) setSelectedActivity(activity);
+        }
+      });
+
+      map.current.on("mouseenter", INTERACTIVE_LAYERS, () => {
+        if (map.current) map.current.getCanvas().style.cursor = "pointer";
+      });
+
+      map.current.on("mouseleave", INTERACTIVE_LAYERS, () => {
+        if (map.current) map.current.getCanvas().style.cursor = "";
+      });
 
       const activities = rawActivities
         .filter((activity) => activity.map.summary_polyline.length)
@@ -105,11 +159,13 @@ export default function Home() {
             movingTime: activity.moving_time,
             elapsedTime: activity.elapsed_time,
             totalElevationGain: activity.total_elevation_gain,
+            averageSpeed: activity.average_speed,
             type: activity.sport_type,
             startDate: new Date(activity.start_date),
             positions: decodePolyline(activity.map.summary_polyline),
           };
-        });
+        })
+        .reverse();
 
       const longitudes = activities.flatMap((activity) =>
         activity.positions.map((pos) => pos.lng)
@@ -269,7 +325,11 @@ export default function Home() {
 
           const feature: Feature = {
             type: "Feature",
-            properties: { colour },
+            properties: {
+              id: activity.id,
+              colour,
+              selected: activity.id === selectedActivity?.id,
+            },
             geometry: {
               type: "LineString",
               coordinates: activity.positions.map((pos) => [pos.lng, pos.lat]),
@@ -290,7 +350,35 @@ export default function Home() {
     activityTypeSettings,
     activityTypeColourSettings,
     filterActivities,
+    selectedActivity,
   ]);
+
+  function formatSeconds(seconds: number) {
+    // Calculate hours, minutes, and seconds
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    // Construct the formatted string
+    let formatted = "";
+    if (hours > 0) formatted += `${hours}h `;
+    if (minutes > 0) formatted += `${minutes}m `;
+    if (secs > 0 || formatted === "") formatted += `${secs}s`; // Include seconds or '0s' for 0 input
+
+    return formatted.trim();
+  }
+
+  function convertSpeedToPace(metresPerSecond: number) {
+    if (metresPerSecond <= 0) {
+      throw new Error("Speed must be greater than 0.");
+    }
+
+    const secondsPerKilometre = 1000 / metresPerSecond;
+    const minutes = Math.floor(secondsPerKilometre / 60);
+    const seconds = Math.round(secondsPerKilometre % 60);
+
+    return `${minutes}:${seconds} /km`;
+  }
 
   return (
     <>
@@ -385,6 +473,35 @@ export default function Home() {
         <Divider />
         <Button onClick={fitBoundsOfActivities}>Fit Bounds</Button>
       </Drawer>
+
+      {selectedActivity && (
+        <Card
+          className={styles.activityCard}
+          title={
+            <div className={styles.activityCardTitle}>
+              {selectedActivity.name}
+              <div className={styles.activityCardDate}>
+                {dayjs(selectedActivity.startDate).format("ddd D MMM YYYY")}
+              </div>
+            </div>
+          }
+        >
+          <strong>Type:</strong> {selectedActivity.type}
+          <br />
+          <strong>Distance:</strong>{" "}
+          {+(selectedActivity.distance / 1000).toFixed(2)}km
+          <br />
+          <strong>Moving Time:</strong>{" "}
+          {formatSeconds(selectedActivity.movingTime)}
+          <br />
+          <strong>Elevation Gain:</strong>{" "}
+          {Math.floor(selectedActivity.totalElevationGain)}
+          m
+          <br />
+          <strong>Average Pace:</strong>{" "}
+          {convertSpeedToPace(selectedActivity.averageSpeed)}
+        </Card>
+      )}
     </>
   );
 }

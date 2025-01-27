@@ -60,6 +60,7 @@ interface RawActivity {
   total_elevation_gain: number;
   sport_type: ActivityType;
   start_date: string;
+  average_speed: number;
   map: { summary_polyline: string };
 }
 
