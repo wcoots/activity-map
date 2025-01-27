@@ -1,12 +1,11 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Feature, FeatureCollection } from "geojson";
+import mapboxgl, { GeoJSONSource, LngLatBounds, Map } from "mapbox-gl";
 import dayjs from "dayjs";
-import mapboxgl, { GeoJSONSource, LngLat, LngLatBounds, Map } from "mapbox-gl";
-import polyline from "@mapbox/polyline";
 
 import "@ant-design/v5-patch-for-react-19";
-import { SettingFilled } from "@ant-design/icons";
+import { LoadingOutlined, SettingFilled } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -17,23 +16,15 @@ import {
   Drawer,
   Input,
   Slider,
+  Spin,
 } from "antd";
 
-import { ActivityType, Label, activityTypeConfig, rawActivities } from "./data";
-import styles from "./page.module.css";
+import { activityTypeConfig } from "@/data";
+import { useStore } from "@/store";
+import { convertSpeedToPace, decodePolyline, formatSeconds } from "@/utils";
+import { Activity, Label, RawActivity } from "@/types";
 
-interface Activity {
-  id: number;
-  name: string;
-  distance: number;
-  movingTime: number;
-  elapsedTime: number;
-  totalElevationGain: number;
-  averageSpeed: number;
-  type: ActivityType;
-  startDate: Date;
-  positions: LngLat[];
-}
+import styles from "./page.module.css";
 
 const ACTIVITY_SOURCE = "activity-source";
 const ACTIVITY_LAYER = "activity-layer";
@@ -45,31 +36,37 @@ export default function Home() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<Map | null>(null);
 
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
-    null
-  );
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const {
+    activities,
+    selectedActivity,
+    activityTypeSettings,
+    activityTypeColourSettings,
+    minimumDistance,
+    maximumDistance,
+    highestDistance,
+    keywordText,
+    year,
+    setActivities,
+    setSelectedActivity,
+    setActivityTypeSettings,
+    setActivityTypeColourSettings,
+    setMinimumDistance,
+    setMaximumDistance,
+    setHighestDistance,
+    setKeywordText,
+    setYear,
+  } = useStore();
+
+  const [mapLoading, setMapLoading] = useState(true);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [rawActivities, setRawActivities] = useState<RawActivity[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [activityTypeSettings, setActivityTypeSettings] = useState(
-    activityTypeConfig.reduce(
-      (acc, config) => ({ ...acc, [config.label]: true }),
-      {} as Record<Label, boolean>
-    )
-  );
-  const [activityTypeColourSettings, setActivityTypeColourSettings] = useState(
-    activityTypeConfig.reduce(
-      (acc, config) => ({ ...acc, [config.label]: config.colour }),
-      {} as Record<Label, string>
-    )
-  );
-  const [minimumDistance, setMinimumDistance] = useState(0);
-  const [maximumDistance, setMaximumDistance] = useState(100);
-  const [highestDistance, setHighestDistance] = useState(100);
-  const [keywordText, setKeywordText] = useState("");
-  const [year, setYear] = useState<number | null>(null);
 
   useEffect(() => {
+    console.log("USE EFFECT 1");
     if (map.current || !mapContainer.current) return;
+
+    fetchActivities();
 
     mapboxgl.accessToken = process.env.MAPBOX_API_KEY!;
 
@@ -100,7 +97,11 @@ export default function Home() {
           source: ACTIVITY_SOURCE,
           filter: ["==", ["get", "selected"], false],
           type: "line",
-          paint: { "line-color": ["get", "colour"], "line-width": 3 },
+          paint: {
+            "line-color": ["get", "colour"],
+            "line-width": 3,
+            "line-blur": 2,
+          },
         });
       }
 
@@ -119,28 +120,6 @@ export default function Home() {
         });
       }
 
-      map.current.on("click", (e) => {
-        if (!map.current) return;
-
-        const features = map.current.queryRenderedFeatures(e.point, {
-          layers: INTERACTIVE_LAYERS,
-        });
-
-        if (!features?.length) {
-          setSelectedActivity(null);
-          return;
-        }
-
-        const [topFeature] = features;
-        if (topFeature.properties?.id) {
-          const activity = activities.find(
-            (activity) => activity.id === topFeature.properties!.id
-          );
-
-          if (activity) setSelectedActivity(activity);
-        }
-      });
-
       map.current.on("mouseenter", INTERACTIVE_LAYERS, () => {
         if (map.current) map.current.getCanvas().style.cursor = "pointer";
       });
@@ -149,108 +128,98 @@ export default function Home() {
         if (map.current) map.current.getCanvas().style.cursor = "";
       });
 
-      const activities = rawActivities
-        .filter((activity) => activity.map.summary_polyline.length)
-        .map((activity): Activity => {
-          return {
-            id: activity.id,
-            name: activity.name,
-            distance: activity.distance,
-            movingTime: activity.moving_time,
-            elapsedTime: activity.elapsed_time,
-            totalElevationGain: activity.total_elevation_gain,
-            averageSpeed: activity.average_speed,
-            type: activity.sport_type,
-            startDate: new Date(activity.start_date),
-            positions: decodePolyline(activity.map.summary_polyline),
-          };
-        })
-        .reverse();
-
-      const longitudes = activities.flatMap((activity) =>
-        activity.positions.map((pos) => pos.lng)
-      );
-
-      const latitudes = activities.flatMap((activity) =>
-        activity.positions.map((pos) => pos.lat)
-      );
-
-      const bounds = new LngLatBounds(
-        [Math.max(...longitudes), Math.max(...latitudes)],
-        [Math.min(...longitudes), Math.min(...latitudes)]
-      );
-
-      map.current.fitBounds(bounds, { padding: 20 });
-
-      setActivities(activities);
-
-      const maxDistance = Math.ceil(
-        Math.max(...activities.map((activity) => activity.distance / 1000))
-      );
-
-      setMaximumDistance(maxDistance);
-      setHighestDistance(maxDistance);
+      setMapLoading(false);
     });
   }, []);
 
-  function decodePolyline(encoded: string): LngLat[] {
-    const latLngArray = polyline.decode(encoded);
-    return latLngArray.map(([lat, lng]) => new LngLat(lng, lat));
-  }
-
   useEffect(() => {
-    const fetchData = async () => {
-      // const activities = rawActivities.map((activity): Activity => {
-      //   return {
-      //     id: activity.id,
-      //     name: activity.name,
-      //     distance: activity.distance,
-      //     movingTime: activity.moving_time,
-      //     elapsedTime: activity.elapsed_time,
-      //     totalElevationGain: activity.total_elevation_gain,
-      //     type: activity.type,
-      //     startDate: new Date(activity.start_date),
-      //     positions: decodePolyline(activity.map.summary_polyline),
-      //   };
-      // });
-      // setData(activities);
-      // const activityFeatureCollection: FeatureCollection = {
-      //   type: "FeatureCollection",
-      //   features: activities.map((activity): Feature => {
-      //     return {
-      //       type: "Feature",
-      //       properties: { name: activity.name },
-      //       geometry: {
-      //         type: "LineString",
-      //         coordinates: activity.positions.map((pos) => [pos.lng, pos.lat]),
-      //       },
-      //     };
-      //   }),
-      // };
-      // map.current
-      //   ?.getSource<GeoJSONSource>(ACTIVITY_SOURCE)
-      //   ?.setData(activityFeatureCollection);
-      // try {
-      //   const baseUrl = "https://www.strava.com/api/v3/athlete/activities";
-      //   const queryParams = new URLSearchParams({ per_page: "20" });
-      //   const response = await fetch(`${baseUrl}?${queryParams.toString()}`, {
-      //     method: "GET",
-      //     headers: { Authorization: `Bearer ${process.env.STRAVA_API_KEY}` },
-      //   });
-      //   if (!response.ok) {
-      //     throw new Error(`HTTP error! status: ${response.status}`);
-      //   }
-      //   const result: Activity[] = await response.json();
-      //   setData(result);
-      // } catch (err) {
-      //   setError((err as Error).message || "An error occurred");
-      // } finally {
-      //   setLoading(false);
-      // }
-    };
+    console.log("USE EFFECT 2");
+    if (!rawActivities.length || !map.current || mapLoading) return;
 
-    fetchData();
-  }, []);
+    const activities = rawActivities
+      .filter((activity) => activity.map.summary_polyline.length)
+      .map((activity): Activity => {
+        return {
+          id: activity.id,
+          name: activity.name,
+          distance: activity.distance,
+          movingTime: activity.moving_time,
+          elapsedTime: activity.elapsed_time,
+          totalElevationGain: activity.total_elevation_gain,
+          averageSpeed: activity.average_speed,
+          type: activity.sport_type,
+          startDate: new Date(activity.start_date),
+          positions: decodePolyline(activity.map.summary_polyline),
+        };
+      })
+      .reverse();
+
+    const longitudes = activities.flatMap((activity) =>
+      activity.positions.map((pos) => pos.lng)
+    );
+
+    const latitudes = activities.flatMap((activity) =>
+      activity.positions.map((pos) => pos.lat)
+    );
+
+    const bounds = new LngLatBounds(
+      [Math.max(...longitudes), Math.max(...latitudes)],
+      [Math.min(...longitudes), Math.min(...latitudes)]
+    );
+
+    map.current.fitBounds(bounds, { padding: 20 });
+
+    setActivities(activities);
+
+    const maxDistance = Math.ceil(
+      Math.max(...activities.map((activity) => activity.distance / 1000))
+    );
+
+    setMaximumDistance(maxDistance);
+    setHighestDistance(maxDistance);
+
+    map.current.on("click", (e) => {
+      if (!map.current) return;
+
+      const features = map.current.queryRenderedFeatures(e.point, {
+        layers: INTERACTIVE_LAYERS,
+      });
+
+      if (!features?.length) {
+        setSelectedActivity(null);
+        return;
+      }
+
+      const [topFeature] = features;
+      if (topFeature.properties?.id) {
+        const activity = activities.find(
+          (activity) => activity.id === topFeature.properties!.id
+        );
+
+        if (activity) setSelectedActivity(activity);
+      }
+    });
+  }, [
+    rawActivities,
+    mapLoading,
+    setSelectedActivity,
+    setActivities,
+    setHighestDistance,
+    setMaximumDistance,
+  ]);
+
+  async function fetchActivities() {
+    try {
+      const response = await fetch("/api/activities/get", { method: "GET" });
+      if (!response.ok) return;
+      const result: RawActivity[] = await response.json();
+      setRawActivities(result);
+    } catch (err) {
+      throw new Error((err as Error).message || "An error occurred");
+    } finally {
+      setActivitiesLoading(false);
+    }
+  }
 
   function fitBoundsOfActivities() {
     if (!map.current) return;
@@ -282,7 +251,7 @@ export default function Home() {
       const minimumDistanceMetres = minimumDistance * 1000;
       const maximumDistanceMetres = maximumDistance * 1000;
 
-      return activities.filter((activity) => {
+      const filteredActivities = activities.filter((activity) => {
         const configItem = activityTypeConfig.find((config) =>
           config.activityTypes.includes(activity.type)
         );
@@ -302,11 +271,26 @@ export default function Home() {
 
         return typeSelected && distanceInRange && textMatch && yearMatch;
       });
+
+      if (!filteredActivities.find(({ id }) => id === selectedActivity?.id)) {
+        setSelectedActivity(null);
+      }
+
+      return filteredActivities;
     },
-    [activityTypeSettings, minimumDistance, maximumDistance, keywordText, year]
+    [
+      activityTypeSettings,
+      minimumDistance,
+      maximumDistance,
+      keywordText,
+      year,
+      selectedActivity,
+      setSelectedActivity,
+    ]
   );
 
   useEffect(() => {
+    console.log("USE EFFECT 3");
     if (!map.current) return;
 
     const activityFeatureCollection: FeatureCollection = {
@@ -353,36 +337,17 @@ export default function Home() {
     selectedActivity,
   ]);
 
-  function formatSeconds(seconds: number) {
-    // Calculate hours, minutes, and seconds
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    // Construct the formatted string
-    let formatted = "";
-    if (hours > 0) formatted += `${hours}h `;
-    if (minutes > 0) formatted += `${minutes}m `;
-    if (secs > 0 || formatted === "") formatted += `${secs}s`; // Include seconds or '0s' for 0 input
-
-    return formatted.trim();
-  }
-
-  function convertSpeedToPace(metresPerSecond: number) {
-    if (metresPerSecond <= 0) {
-      throw new Error("Speed must be greater than 0.");
-    }
-
-    const secondsPerKilometre = 1000 / metresPerSecond;
-    const minutes = Math.floor(secondsPerKilometre / 60);
-    const seconds = Math.round(secondsPerKilometre % 60);
-
-    return `${minutes}:${seconds} /km`;
-  }
-
   return (
     <>
       <div className={styles.page} ref={mapContainer} />
+
+      {activitiesLoading && (
+        <Spin
+          className={styles.spinner}
+          indicator={<LoadingOutlined spin />}
+          size="large"
+        />
+      )}
 
       <Button
         className={styles.settingsButton}
@@ -494,12 +459,11 @@ export default function Home() {
           <strong>Moving Time:</strong>{" "}
           {formatSeconds(selectedActivity.movingTime)}
           <br />
-          <strong>Elevation Gain:</strong>{" "}
-          {Math.floor(selectedActivity.totalElevationGain)}
-          m
-          <br />
           <strong>Average Pace:</strong>{" "}
           {convertSpeedToPace(selectedActivity.averageSpeed)}
+          <br />
+          <strong>Elevation Gain:</strong>{" "}
+          {Math.floor(selectedActivity.totalElevationGain)}m
         </Card>
       )}
     </>
