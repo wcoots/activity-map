@@ -2,3 +2,9 @@
   height: 100svh;
   width: 100svw;
 }
+
+.settingsButton {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
