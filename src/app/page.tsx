@@ -6,7 +6,7 @@ import polyline from "@mapbox/polyline";
 
 import "@ant-design/v5-patch-for-react-19";
 import { SettingFilled } from "@ant-design/icons";
-import { Button, Checkbox, Divider, Drawer, Slider } from "antd";
+import { Button, Checkbox, Divider, Drawer, Input, Slider } from "antd";
 
 import { ActivityType, Label, activityTypeConfig, rawActivities } from "./data";
 import styles from "./page.module.css";
@@ -41,6 +41,7 @@ export default function Home() {
   const [minimumDistance, setMinimumDistance] = useState(0);
   const [maximumDistance, setMaximumDistance] = useState(100);
   const [highestDistance, setHighestDistance] = useState(100);
+  const [keywordText, setKeywordText] = useState("");
 
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
@@ -178,6 +179,31 @@ export default function Home() {
     fetchData();
   }, []);
 
+  function fitBoundsOfActivities() {
+    if (!map.current) return;
+
+    const filteredActivities = filterActivities(activities);
+
+    if (!filteredActivities.length) return;
+
+    const longitudes = filteredActivities.flatMap((activity) =>
+      activity.positions.map((pos) => pos.lng)
+    );
+
+    const latitudes = filteredActivities.flatMap((activity) =>
+      activity.positions.map((pos) => pos.lat)
+    );
+
+    const bounds = new LngLatBounds(
+      [Math.max(...longitudes), Math.max(...latitudes)],
+      [Math.min(...longitudes), Math.min(...latitudes)]
+    );
+
+    map.current.fitBounds(bounds, {
+      padding: { top: 20, left: 20, bottom: 20, right: 400 },
+    });
+  }
+
   const filterActivities = useCallback(
     (activities: Activity[]): Activity[] => {
       const minimumDistanceMetres = minimumDistance * 1000;
@@ -194,11 +220,14 @@ export default function Home() {
         const distanceInRange =
           activity.distance >= minimumDistanceMetres &&
           activity.distance <= maximumDistanceMetres;
+        const textMatch = keywordText.length
+          ? activity.name.toLowerCase().includes(keywordText.toLowerCase())
+          : true;
 
-        return typeSelected && distanceInRange;
+        return typeSelected && distanceInRange && textMatch;
       });
     },
-    [activityTypeSettings, minimumDistance, maximumDistance]
+    [activityTypeSettings, minimumDistance, maximumDistance, keywordText]
   );
 
   useEffect(() => {
@@ -249,7 +278,7 @@ export default function Home() {
       />
 
       <Drawer
-        title="Basic Drawer"
+        title="Settings"
         onClose={() => setSettingsOpen(false)}
         open={settingsOpen}
       >
@@ -279,12 +308,27 @@ export default function Home() {
           min={0}
           max={highestDistance}
           defaultValue={[0, highestDistance]}
-          marks={{ 0: "0", [highestDistance]: highestDistance.toString() }}
+          marks={{
+            0: "0km",
+            [highestDistance]: `${highestDistance.toString()}km`,
+          }}
           onChange={([min, max]) => {
             setMinimumDistance(min);
             setMaximumDistance(max);
           }}
         />
+
+        <Divider />
+
+        <h3>Keywords</h3>
+        <Input
+          placeholder="parkrun"
+          value={keywordText}
+          onChange={(event) => setKeywordText(event.target.value)}
+        />
+
+        <Divider />
+        <Button onClick={fitBoundsOfActivities}>Fit Bounds</Button>
       </Drawer>
     </>
   );
