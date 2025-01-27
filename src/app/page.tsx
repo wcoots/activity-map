@@ -1,12 +1,22 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Feature, FeatureCollection } from "geojson";
+import dayjs from "dayjs";
 import mapboxgl, { GeoJSONSource, LngLat, LngLatBounds, Map } from "mapbox-gl";
 import polyline from "@mapbox/polyline";
 
 import "@ant-design/v5-patch-for-react-19";
 import { SettingFilled } from "@ant-design/icons";
-import { Button, Checkbox, Divider, Drawer, Input, Slider } from "antd";
+import {
+  Button,
+  Checkbox,
+  ColorPicker as ColourPicker,
+  DatePicker,
+  Divider,
+  Drawer,
+  Input,
+  Slider,
+} from "antd";
 
 import { ActivityType, Label, activityTypeConfig, rawActivities } from "./data";
 import styles from "./page.module.css";
@@ -38,10 +48,17 @@ export default function Home() {
       {} as Record<Label, boolean>
     )
   );
+  const [activityTypeColourSettings, setActivityTypeColourSettings] = useState(
+    activityTypeConfig.reduce(
+      (acc, config) => ({ ...acc, [config.label]: config.colour }),
+      {} as Record<Label, string>
+    )
+  );
   const [minimumDistance, setMinimumDistance] = useState(0);
   const [maximumDistance, setMaximumDistance] = useState(100);
   const [highestDistance, setHighestDistance] = useState(100);
   const [keywordText, setKeywordText] = useState("");
+  const [year, setYear] = useState<number | null>(null);
 
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
@@ -223,11 +240,14 @@ export default function Home() {
         const textMatch = keywordText.length
           ? activity.name.toLowerCase().includes(keywordText.toLowerCase())
           : true;
+        const yearMatch = year
+          ? activity.startDate.getFullYear() === year
+          : true;
 
-        return typeSelected && distanceInRange && textMatch;
+        return typeSelected && distanceInRange && textMatch && yearMatch;
       });
     },
-    [activityTypeSettings, minimumDistance, maximumDistance, keywordText]
+    [activityTypeSettings, minimumDistance, maximumDistance, keywordText, year]
   );
 
   useEffect(() => {
@@ -237,9 +257,13 @@ export default function Home() {
       type: "FeatureCollection",
       features: filterActivities(activities).reduce(
         (acc: Feature[], activity) => {
-          const colour = activityTypeConfig.find((config) =>
+          const configItem = activityTypeConfig.find((config) =>
             config.activityTypes.includes(activity.type)
-          )?.colour;
+          );
+
+          if (!configItem) return acc;
+
+          const colour = activityTypeColourSettings[configItem.label];
 
           if (!colour) return acc;
 
@@ -261,7 +285,12 @@ export default function Home() {
     map.current
       ?.getSource<GeoJSONSource>(ACTIVITY_SOURCE)
       ?.setData(activityFeatureCollection);
-  }, [activities, activityTypeSettings, filterActivities]);
+  }, [
+    activities,
+    activityTypeSettings,
+    activityTypeColourSettings,
+    filterActivities,
+  ]);
 
   return (
     <>
@@ -285,18 +314,35 @@ export default function Home() {
         <h3>Activity Types</h3>
         <div className={styles.checkboxes}>
           {Object.entries(activityTypeSettings).map(([label, visible]) => (
-            <Checkbox
-              key={label}
-              checked={visible}
-              onChange={(event) => {
-                setActivityTypeSettings({
-                  ...activityTypeSettings,
-                  [label]: event.target.checked,
-                });
-              }}
-            >
-              {label}
-            </Checkbox>
+            <div key={label}>
+              <Checkbox
+                key={label}
+                checked={visible}
+                onChange={(event) => {
+                  setActivityTypeSettings({
+                    ...activityTypeSettings,
+                    [label]: event.target.checked,
+                  });
+                }}
+              >
+                {label}
+              </Checkbox>
+
+              <ColourPicker
+                className={styles.colourPicker}
+                value={activityTypeColourSettings[label as Label]}
+                size="small"
+                disabledAlpha
+                disabledFormat
+                format="hex"
+                onChangeComplete={(colour) => {
+                  setActivityTypeColourSettings({
+                    ...activityTypeColourSettings,
+                    [label]: colour.toHexString(),
+                  });
+                }}
+              />
+            </div>
           ))}
         </div>
 
@@ -316,6 +362,15 @@ export default function Home() {
             setMinimumDistance(min);
             setMaximumDistance(max);
           }}
+        />
+
+        <Divider />
+
+        <h3>Year</h3>
+        <DatePicker
+          onChange={(a) => setYear(a?.year())}
+          picker="year"
+          maxDate={dayjs()}
         />
 
         <Divider />

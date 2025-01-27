@@ -11,6 +11,9 @@
   "dependencies": {
     "@mapbox/polyline": "^1.2.1",
     "antd": "^5.23.2",
+    "dayjs": "^1.11.13",
+    "from": "^0.1.7",
+    "import": "^0.0.6",
     "mapbox-gl": "^3.9.3",
     "next": "15.1.6",
     "react": "^19.0.0",
