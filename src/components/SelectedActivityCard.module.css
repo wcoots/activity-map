@@ -1,0 +1,14 @@
+.activityCard {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+}
+
+.activityCardTitle {
+  padding: 15px 0;
+}
+
+.activityCardDate {
+  font-size: 0.7em;
+  color: #666;
+}

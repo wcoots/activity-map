@@ -15,27 +15,3 @@
   top: 20px;
   right: 20px;
 }
-
-.checkboxes {
-  display: grid;
-  gap: 1px;
-}
-
-.colourPicker {
-  float: right;
-}
-
-.activityCard {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-}
-
-.activityCardTitle {
-  padding: 15px 0;
-}
-
-.activityCardDate {
-  font-size: 0.7em;
-  color: #666;
-}

@@ -1,0 +1,8 @@
+.checkboxes {
+  display: grid;
+  gap: 1px;
+}
+
+.colourPicker {
+  float: right;
+}

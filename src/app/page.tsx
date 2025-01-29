@@ -2,27 +2,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Feature, FeatureCollection } from "geojson";
 import mapboxgl, { GeoJSONSource, LngLatBounds, Map } from "mapbox-gl";
-import dayjs from "dayjs";
 
 import "@ant-design/v5-patch-for-react-19";
 import { LoadingOutlined, SettingFilled } from "@ant-design/icons";
-import {
-  Button,
-  Card,
-  Checkbox,
-  ColorPicker as ColourPicker,
-  DatePicker,
-  Divider,
-  Drawer,
-  Input,
-  Slider,
-  Spin,
-} from "antd";
+import { Button, Spin } from "antd";
 
+import { SelectedActivityCard, SettingsDrawer } from "@/components";
 import { activityTypeConfig } from "@/data";
 import { useStore } from "@/store";
-import { convertSpeedToPace, decodePolyline, formatSeconds } from "@/utils";
-import { Activity, Label, RawActivity } from "@/types";
+import { decodePolyline } from "@/utils";
+import { Activity, RawActivity } from "@/types";
 
 import styles from "./page.module.css";
 
@@ -43,18 +32,12 @@ export default function Home() {
     activityTypeColourSettings,
     minimumDistance,
     maximumDistance,
-    highestDistance,
     keywordText,
     year,
     setActivities,
     setSelectedActivity,
-    setActivityTypeSettings,
-    setActivityTypeColourSettings,
-    setMinimumDistance,
     setMaximumDistance,
     setHighestDistance,
-    setKeywordText,
-    setYear,
   } = useStore();
 
   const [mapLoading, setMapLoading] = useState(true);
@@ -63,7 +46,7 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
-    console.log("USE EFFECT 1");
+    // Map preparation useEffect. Called once on component mount.
     if (map.current || !mapContainer.current) return;
 
     fetchActivities();
@@ -133,7 +116,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    console.log("USE EFFECT 2");
+    // Activities preparation useEffect. Called once on activities load.
     if (!rawActivities.length || !map.current || mapLoading) return;
 
     const activities = rawActivities
@@ -290,7 +273,7 @@ export default function Home() {
   );
 
   useEffect(() => {
-    console.log("USE EFFECT 3");
+    // Activities update useEffect. Called whenever activities or filters change.
     if (!map.current) return;
 
     const activityFeatureCollection: FeatureCollection = {
@@ -359,113 +342,13 @@ export default function Home() {
         onClick={() => setSettingsOpen(true)}
       />
 
-      <Drawer
-        title="Settings"
-        onClose={() => setSettingsOpen(false)}
+      <SettingsDrawer
         open={settingsOpen}
-      >
-        <h3>Activity Types</h3>
-        <div className={styles.checkboxes}>
-          {Object.entries(activityTypeSettings).map(([label, visible]) => (
-            <div key={label}>
-              <Checkbox
-                key={label}
-                checked={visible}
-                onChange={(event) => {
-                  setActivityTypeSettings({
-                    ...activityTypeSettings,
-                    [label]: event.target.checked,
-                  });
-                }}
-              >
-                {label}
-              </Checkbox>
+        setOpen={setSettingsOpen}
+        fitBoundsOfActivities={fitBoundsOfActivities}
+      />
 
-              <ColourPicker
-                className={styles.colourPicker}
-                value={activityTypeColourSettings[label as Label]}
-                size="small"
-                disabledAlpha
-                disabledFormat
-                format="hex"
-                onChangeComplete={(colour) => {
-                  setActivityTypeColourSettings({
-                    ...activityTypeColourSettings,
-                    [label]: colour.toHexString(),
-                  });
-                }}
-              />
-            </div>
-          ))}
-        </div>
-
-        <Divider />
-
-        <h3>Distance (km)</h3>
-        <Slider
-          range
-          min={0}
-          max={highestDistance}
-          defaultValue={[0, highestDistance]}
-          marks={{
-            0: "0km",
-            [highestDistance]: `${highestDistance.toString()}km`,
-          }}
-          onChange={([min, max]) => {
-            setMinimumDistance(min);
-            setMaximumDistance(max);
-          }}
-        />
-
-        <Divider />
-
-        <h3>Year</h3>
-        <DatePicker
-          onChange={(a) => setYear(a?.year())}
-          picker="year"
-          maxDate={dayjs()}
-        />
-
-        <Divider />
-
-        <h3>Keywords</h3>
-        <Input
-          placeholder="parkrun"
-          value={keywordText}
-          onChange={(event) => setKeywordText(event.target.value)}
-        />
-
-        <Divider />
-        <Button onClick={fitBoundsOfActivities}>Fit Bounds</Button>
-      </Drawer>
-
-      {selectedActivity && (
-        <Card
-          className={styles.activityCard}
-          title={
-            <div className={styles.activityCardTitle}>
-              {selectedActivity.name}
-              <div className={styles.activityCardDate}>
-                {dayjs(selectedActivity.startDate).format("ddd D MMM YYYY")}
-              </div>
-            </div>
-          }
-        >
-          <strong>Type:</strong> {selectedActivity.type}
-          <br />
-          <strong>Distance:</strong>{" "}
-          {+(selectedActivity.distance / 1000).toFixed(2)}km
-          <br />
-          <strong>Moving Time:</strong>{" "}
-          {formatSeconds(selectedActivity.movingTime)}
-          <br />
-          <strong>Average Pace:</strong>{" "}
-          {convertSpeedToPace(selectedActivity.averageSpeed)}
-          <br />
-          <strong>Elevation Gain:</strong>{" "}
-          {Math.floor(selectedActivity.totalElevationGain)}m
-        </Card>
-      )}
+      <SelectedActivityCard />
     </>
   );
 }

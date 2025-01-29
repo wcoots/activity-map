@@ -79,4 +79,10 @@ export interface Activity {
   positions: LngLat[];
 }
 
-export type Label = "Walks" | "Runs" | "Rides" | "Snowsports" | "Watersports";
+export type Label =
+  | "Walks"
+  | "Runs"
+  | "Rides"
+  | "Snowsports"
+  | "Watersports"
+  | "Other";

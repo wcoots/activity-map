@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(): Promise<NextResponse> {
   const baseUrl = "https://www.strava.com/api/v3/athlete/activities";
-  const perPage = 200;
+  const perPage = 200; // maximum allowed by Strava API
 
   async function fetchAllPages(
     page = 1,
