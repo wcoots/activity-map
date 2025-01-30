@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-
-const NEXT_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
+import { getBaseUrl } from "../../utils";
 
 export async function GET() {
-  const res = NextResponse.redirect(new URL("/", NEXT_PUBLIC_BASE_URL));
+  const baseUrl = await getBaseUrl();
+  const res = NextResponse.redirect(new URL("/", baseUrl));
 
   res.cookies.set("strava_access_token", "", {
     httpOnly: true,

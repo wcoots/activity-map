@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { RawActivity } from "@/types";
-
-const STRAVA_REDIRECT_URI =
-  process.env.NEXT_PUBLIC_BASE_URL + "/api/auth/refresh";
+import { getBaseUrl } from "../utils";
 
 async function refreshAccessToken() {
-  const refreshResponse = await fetch(STRAVA_REDIRECT_URI);
+  const baseUrl = await getBaseUrl();
+  const stravaRedirectUri = baseUrl + "/api/auth/refresh";
+  const refreshResponse = await fetch(stravaRedirectUri);
   const data = await refreshResponse.json();
   return data.success;
 }

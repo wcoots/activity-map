@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBaseUrl } from "../../utils";
 
 const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID!;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET!;
@@ -35,9 +36,8 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
 
-    const res = NextResponse.redirect(
-      new URL("/", process.env.NEXT_PUBLIC_BASE_URL)
-    );
+    const baseUrl = await getBaseUrl();
+    const res = NextResponse.redirect(new URL("/", baseUrl));
     res.cookies.set("strava_access_token", data.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
