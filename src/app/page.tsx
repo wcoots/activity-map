@@ -119,34 +119,32 @@ export default function Home() {
     // Authentication and activity fetching useEffect. Called once on component mount.
     async function checkAuth() {
       try {
-        const authCheckResponse = await fetch("/api/auth/check");
-        const authCheckResult: { authenticated: boolean } =
-          await authCheckResponse.json();
+        const response = await fetch("/api/auth/check");
 
-        if (authCheckResult.authenticated) {
+        if (response.status === 200) {
           setIsAuthenticated(true);
-          setActivitiesLoading(true);
-
-          try {
-            const activitiesResponse = await fetch("/api/activities", {
-              method: "GET",
-            });
-            if (!activitiesResponse.ok) return;
-
-            const activitiesResult: RawActivity[] =
-              await activitiesResponse.json();
-            setRawActivities(activitiesResult);
-          } catch (err) {
-            console.error("Error fetching activities:", err);
-          } finally {
-            setActivitiesLoading(false);
-          }
+          await fetchActivities();
         } else {
           setIsAuthenticated(false);
         }
       } catch (error) {
         console.error("Error checking authentication:", error);
         setIsAuthenticated(false);
+      }
+    }
+
+    async function fetchActivities() {
+      try {
+        setActivitiesLoading(true);
+        const response = await fetch("/api/activities", { method: "GET" });
+        if (!response.ok) return;
+
+        const result: RawActivity[] = await response.json();
+        setRawActivities(result);
+      } catch (err) {
+        console.error("Error fetching activities:", err);
+      } finally {
+        setActivitiesLoading(false);
       }
     }
 

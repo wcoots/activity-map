@@ -40,8 +40,25 @@ export default function SettingsDrawer({
     setYear,
   } = useStore();
 
+  const footer = (
+    <Button
+      className={styles.logoutButton}
+      danger
+      onClick={() => {
+        window.location.href = "/api/auth/logout";
+      }}
+    >
+      Logout
+    </Button>
+  );
+
   return (
-    <Drawer title="Settings" onClose={() => setOpen(false)} open={open}>
+    <Drawer
+      title="Settings"
+      onClose={() => setOpen(false)}
+      open={open}
+      footer={footer}
+    >
       <h3>Activity Types</h3>
       <div className={styles.checkboxes}>
         {Object.entries(activityTypeSettings).map(([label, visible]) => (

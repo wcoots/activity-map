@@ -5,8 +5,6 @@ const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID!;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET!;
 
 export async function GET() {
-  console.log("/auth/refresh");
-
   const { get: getCookie } = await cookies();
   const refreshToken = getCookie("strava_refresh_token")?.value;
 

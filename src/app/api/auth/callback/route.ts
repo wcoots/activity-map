@@ -4,8 +4,6 @@ const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID!;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET!;
 
 export async function GET(request: NextRequest) {
-  console.log("/auth/callback");
-
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
 
@@ -37,7 +35,6 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
 
-    // Store tokens in cookies (or use a database)
     const res = NextResponse.redirect(
       new URL("/", process.env.NEXT_PUBLIC_BASE_URL)
     );

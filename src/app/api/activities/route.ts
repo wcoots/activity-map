@@ -12,13 +12,10 @@ async function refreshAccessToken() {
 }
 
 export async function GET(): Promise<NextResponse> {
-  console.log("/activities");
-
   const { get: getCookie } = await cookies();
   let accessToken = getCookie("strava_access_token")?.value;
 
   if (!accessToken) {
-    // Try to refresh token if missing
     const refreshed = await refreshAccessToken();
     if (!refreshed) {
       return NextResponse.json(

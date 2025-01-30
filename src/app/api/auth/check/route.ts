@@ -5,5 +5,9 @@ export async function GET() {
   const { get: getCookie } = await cookies();
   const accessToken = getCookie("strava_access_token")?.value;
 
-  return NextResponse.json({ authenticated: !!accessToken }, { status: 200 });
+  if (!accessToken) {
+    return NextResponse.json({ authenticated: false }, { status: 401 });
+  }
+
+  return NextResponse.json({ authenticated: true }, { status: 200 });
 }
