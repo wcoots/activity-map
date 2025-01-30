@@ -370,7 +370,7 @@ export default function Home() {
       {isAuthenticated === false && (
         <Card className={styles.card}>
           <div className={styles.cardContent}>
-            <div>Click the button below to connect your Strava account.</div>
+            <div>Click below to connect your Strava account.</div>
             <Button
               className={styles.loginButton}
               onClick={() => {
@@ -378,6 +378,7 @@ export default function Home() {
               }}
             >
               Connect with Strava
+              <img src="/strava.svg" alt="strava" height={16} />
             </Button>
           </div>
         </Card>

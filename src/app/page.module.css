@@ -20,10 +20,12 @@
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 11;
+  width: min(calc(100svw - 40px), 420px);
 }
 
 .cardContent {
   align-items: center;
+  text-align: center;
   display: grid;
   gap: 20px;
 }
