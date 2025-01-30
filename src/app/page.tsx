@@ -5,7 +5,7 @@ import mapboxgl, { GeoJSONSource, LngLatBounds, Map } from "mapbox-gl";
 
 import "@ant-design/v5-patch-for-react-19";
 import { LoadingOutlined, SettingFilled } from "@ant-design/icons";
-import { Button, Spin } from "antd";
+import { Button, Card, Spin } from "antd";
 
 import { SelectedActivityCard, SettingsDrawer } from "@/components";
 import { activityTypeConfig } from "@/data";
@@ -40,16 +40,15 @@ export default function Home() {
     setHighestDistance,
   } = useStore();
 
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [mapLoading, setMapLoading] = useState(true);
-  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [rawActivities, setRawActivities] = useState<RawActivity[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     // Map preparation useEffect. Called once on component mount.
     if (map.current || !mapContainer.current) return;
-
-    fetchActivities();
 
     mapboxgl.accessToken = process.env.MAPBOX_API_KEY!;
 
@@ -58,6 +57,7 @@ export default function Home() {
       style: "mapbox://styles/mapbox/dark-v11",
       center: [-4, 54.2],
       zoom: 5,
+      attributionControl: false,
     });
 
     map.current.on("load", () => {
@@ -113,6 +113,44 @@ export default function Home() {
 
       setMapLoading(false);
     });
+  }, []);
+
+  useEffect(() => {
+    // Authentication and activity fetching useEffect. Called once on component mount.
+    async function checkAuth() {
+      try {
+        const authCheckResponse = await fetch("/api/auth/check");
+        const authCheckResult: { authenticated: boolean } =
+          await authCheckResponse.json();
+
+        if (authCheckResult.authenticated) {
+          setIsAuthenticated(true);
+          setActivitiesLoading(true);
+
+          try {
+            const activitiesResponse = await fetch("/api/activities", {
+              method: "GET",
+            });
+            if (!activitiesResponse.ok) return;
+
+            const activitiesResult: RawActivity[] =
+              await activitiesResponse.json();
+            setRawActivities(activitiesResult);
+          } catch (err) {
+            console.error("Error fetching activities:", err);
+          } finally {
+            setActivitiesLoading(false);
+          }
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error("Error checking authentication:", error);
+        setIsAuthenticated(false);
+      }
+    }
+
+    checkAuth();
   }, []);
 
   useEffect(() => {
@@ -190,19 +228,6 @@ export default function Home() {
     setHighestDistance,
     setMaximumDistance,
   ]);
-
-  async function fetchActivities() {
-    try {
-      const response = await fetch("/api/activities/get", { method: "GET" });
-      if (!response.ok) return;
-      const result: RawActivity[] = await response.json();
-      setRawActivities(result);
-    } catch (err) {
-      throw new Error((err as Error).message || "An error occurred");
-    } finally {
-      setActivitiesLoading(false);
-    }
-  }
 
   function fitBoundsOfActivities() {
     if (!map.current) return;
@@ -324,31 +349,56 @@ export default function Home() {
     <>
       <div className={styles.page} ref={mapContainer} />
 
-      {activitiesLoading && (
-        <Spin
-          className={styles.spinner}
-          indicator={<LoadingOutlined spin />}
-          size="large"
-        />
+      {(mapLoading || isAuthenticated === false || activitiesLoading) && (
+        <div className={styles.overlay} />
       )}
 
-      <Button
-        className={styles.settingsButton}
-        type="primary"
-        color="default"
-        variant="solid"
-        size="large"
-        icon={<SettingFilled />}
-        onClick={() => setSettingsOpen(true)}
-      />
+      {isAuthenticated === false && (
+        <Card className={styles.card}>
+          <div className={styles.cardContent}>
+            <div>Click the button below to connect your Strava account.</div>
+            <Button
+              className={styles.loginButton}
+              onClick={() => {
+                window.location.href = "/api/auth/strava";
+              }}
+            >
+              Connect with Strava
+            </Button>
+          </div>
+        </Card>
+      )}
 
-      <SettingsDrawer
-        open={settingsOpen}
-        setOpen={setSettingsOpen}
-        fitBoundsOfActivities={fitBoundsOfActivities}
-      />
+      {isAuthenticated === true && activitiesLoading && (
+        <Card className={styles.card}>
+          <div className={styles.cardContent}>
+            <Spin indicator={<LoadingOutlined spin />} size="large" />
+            <div>Getting activities from Strava...</div>
+          </div>
+        </Card>
+      )}
 
-      <SelectedActivityCard />
+      {isAuthenticated === true && !activitiesLoading && (
+        <>
+          <Button
+            className={styles.settingsButton}
+            type="primary"
+            color="default"
+            variant="solid"
+            size="large"
+            icon={<SettingFilled />}
+            onClick={() => setSettingsOpen(true)}
+          />
+
+          <SettingsDrawer
+            open={settingsOpen}
+            setOpen={setSettingsOpen}
+            fitBoundsOfActivities={fitBoundsOfActivities}
+          />
+
+          <SelectedActivityCard />
+        </>
+      )}
     </>
   );
 }
