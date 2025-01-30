@@ -1,11 +1,12 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Feature, FeatureCollection } from "geojson";
 import mapboxgl, { GeoJSONSource, LngLatBounds, Map } from "mapbox-gl";
 
 import "@ant-design/v5-patch-for-react-19";
 import { LoadingOutlined, SettingFilled } from "@ant-design/icons";
-import { Button, Card, Spin } from "antd";
+import { Button, Card, message, Spin } from "antd";
 
 import { SelectedActivityCard, SettingsDrawer } from "@/components";
 import { activityTypeConfig } from "@/data";
@@ -22,8 +23,10 @@ const SELECTED_ACTIVITY_LAYER = "selected-activity-layer";
 const INTERACTIVE_LAYERS = [ACTIVITY_LAYER, SELECTED_ACTIVITY_LAYER];
 
 export default function Home() {
+  const searchParams = useSearchParams();
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<Map | null>(null);
+  const [messageApi, contextHolder] = message.useMessage();
 
   const {
     activities,
@@ -166,6 +169,13 @@ export default function Home() {
 
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      messageApi.open({ type: "error", content: "Authentication Cancelled" });
+    }
+  }, [searchParams, messageApi]);
 
   useEffect(() => {
     // Activities preparation useEffect. Called once on activities load.
@@ -361,6 +371,8 @@ export default function Home() {
 
   return (
     <>
+      {contextHolder}
+
       <div className={styles.page} ref={mapContainer} />
 
       {(mapLoading || isAuthenticated === false || activitiesLoading) && (

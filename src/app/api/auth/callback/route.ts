@@ -6,7 +6,13 @@ const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET!;
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
+  const error = url.searchParams.get("error");
   const code = url.searchParams.get("code");
+
+  if (error) {
+    const baseUrl = await getBaseUrl();
+    return NextResponse.redirect(new URL(`/?error=${error}`, baseUrl));
+  }
 
   if (!code) {
     return NextResponse.json(
