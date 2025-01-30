@@ -40,14 +40,13 @@ export default function SettingsDrawer({
     setYear,
   } = useStore();
 
+  function logout() {
+    window.location.href = "/api/auth/logout";
+    localStorage.removeItem("activities");
+  }
+
   const footer = (
-    <Button
-      className={styles.logoutButton}
-      danger
-      onClick={() => {
-        window.location.href = "/api/auth/logout";
-      }}
-    >
+    <Button className={styles.logoutButton} danger onClick={logout}>
       Logout
     </Button>
   );

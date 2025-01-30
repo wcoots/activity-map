@@ -136,11 +136,27 @@ export default function Home() {
     async function fetchActivities() {
       try {
         setActivitiesLoading(true);
-        const response = await fetch("/api/activities", { method: "GET" });
+        const cachedActivities = localStorage.getItem("activities");
+
+        if (cachedActivities) {
+          const { ts, data } = JSON.parse(cachedActivities);
+          const cacheAge = Date.now() - parseInt(ts, 10);
+
+          if (cacheAge < 3600000) {
+            setRawActivities(data);
+            return;
+          }
+        }
+
+        const response = await fetch("/api/activities");
         if (!response.ok) return;
 
         const result: RawActivity[] = await response.json();
         setRawActivities(result);
+        localStorage.setItem(
+          "activities",
+          JSON.stringify({ ts: Date.now().toString(), data: result })
+        );
       } catch (err) {
         console.error("Error fetching activities:", err);
       } finally {
