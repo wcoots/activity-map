@@ -28,6 +28,7 @@ export default function SettingsDrawer({
   fitBoundsOfActivities: () => void;
 }) {
   const {
+    athlete,
     activityTypeSettings,
     activityTypeColourSettings,
     highestDistance,
@@ -43,8 +44,25 @@ export default function SettingsDrawer({
 
   function logout() {
     window.location.href = "/api/auth/logout";
+    localStorage.removeItem("athlete");
     localStorage.removeItem("activities");
   }
+
+  const header = athlete ? (
+    <span className={styles.header}>
+      {`Welcome, ${athlete.firstName} ${athlete.lastName}`}
+      <a
+        className={styles.image}
+        href={`https://www.strava.com/athletes/${athlete.id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <img src={athlete.imageUrl} alt="Profile" height={20} />
+      </a>
+    </span>
+  ) : (
+    <span className={styles.header}>Welcome</span>
+  );
 
   const footer = (
     <span className={styles.footer}>
@@ -61,10 +79,10 @@ export default function SettingsDrawer({
 
   return (
     <Drawer
-      title="Settings"
-      onClose={() => setOpen(false)}
-      open={open}
+      title={header}
       footer={footer}
+      open={open}
+      onClose={() => setOpen(false)}
     >
       <h3>Activity Types</h3>
       <div className={styles.checkboxes}>

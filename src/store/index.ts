@@ -1,8 +1,9 @@
 import { activityTypeConfig } from "@/data";
-import { Activity, Label } from "@/types";
+import { Athlete, Activity, Label } from "@/types";
 import { create } from "zustand";
 
 interface State {
+  athlete: Athlete | null;
   activities: Activity[];
   selectedActivity: Activity | null;
   activityTypeSettings: Record<Label, boolean>;
@@ -13,6 +14,7 @@ interface State {
   keywordText: string;
   year: number | null;
   lastRefreshed: Date | null;
+  setAthlete: (athlete: Athlete | null) => void;
   setActivities: (activities: Activity[]) => void;
   setSelectedActivity: (activity: Activity | null) => void;
   setActivityTypeSettings: (
@@ -30,6 +32,7 @@ interface State {
 }
 
 export const useStore = create<State>((set) => ({
+  athlete: null,
   activities: [],
   selectedActivity: null,
   activityTypeSettings: activityTypeConfig.reduce(
@@ -46,6 +49,7 @@ export const useStore = create<State>((set) => ({
   keywordText: "",
   year: null,
   lastRefreshed: null,
+  setAthlete: (athlete) => set({ athlete }),
   setActivities: (activities) => set({ activities }),
   setSelectedActivity: (selectedActivity) => set({ selectedActivity }),
   setActivityTypeSettings: (activityTypeSettings) =>

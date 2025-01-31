@@ -53,6 +53,20 @@ export enum ActivityType {
   Yoga = "Yoga",
 }
 
+export interface RawAthelete {
+  id: number;
+  firstname: string;
+  lastname: string;
+  profile_medium: string;
+}
+
+export interface Athlete {
+  id: number;
+  firstName: string;
+  lastName: string;
+  imageUrl: string;
+}
+
 export interface RawActivity {
   id: number;
   name: string;

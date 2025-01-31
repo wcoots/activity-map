@@ -7,6 +7,15 @@
   float: right;
 }
 
+.header {
+  display: flex;
+  align-items: center;
+}
+
+.image {
+  margin-left: auto;
+}
+
 .footer {
   display: flex;
   align-items: center;

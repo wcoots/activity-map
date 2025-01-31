@@ -13,7 +13,7 @@ import { SelectedActivityCard, SettingsDrawer } from "@/components";
 import { activityTypeConfig } from "@/data";
 import { useStore } from "@/store";
 import { decodePolyline } from "@/utils";
-import { Activity, RawActivity } from "@/types";
+import { Activity, Athlete, RawActivity, RawAthelete } from "@/types";
 
 import styles from "./page.module.css";
 
@@ -38,6 +38,7 @@ export default function Home() {
     maximumDistance,
     keywordText,
     year,
+    setAthlete,
     setActivities,
     setSelectedActivity,
     setMaximumDistance,
@@ -47,6 +48,7 @@ export default function Home() {
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [mapLoading, setMapLoading] = useState(true);
+  const [athleteLoading, setAthleteLoading] = useState(false);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [rawActivities, setRawActivities] = useState<RawActivity[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -128,13 +130,54 @@ export default function Home() {
 
         if (response.status === 200) {
           setIsAuthenticated(true);
-          await fetchActivities();
+          await Promise.all([fetchAthlete(), fetchActivities()]);
         } else {
           setIsAuthenticated(false);
         }
       } catch (error) {
         console.error("Error checking authentication:", error);
         setIsAuthenticated(false);
+      }
+    }
+
+    async function fetchAthlete() {
+      try {
+        setAthleteLoading(true);
+        const cachedAthlete = localStorage.getItem("athlete");
+
+        if (cachedAthlete) {
+          const { ts, data } = JSON.parse(cachedAthlete);
+          setLastRefreshed(dayjs(parseInt(ts, 10)).toDate());
+
+          const cacheAge = Date.now() - parseInt(ts, 10);
+
+          if (cacheAge < 3600000) {
+            setAthlete(data);
+            return;
+          }
+        }
+
+        const response = await fetch("/api/athlete");
+        if (!response.ok) return;
+
+        const result: RawAthelete = await response.json();
+        const athlete: Athlete = {
+          id: result.id,
+          firstName: result.firstname,
+          lastName: result.lastname,
+          imageUrl: result.profile_medium,
+        };
+
+        setAthlete(athlete);
+
+        localStorage.setItem(
+          "athlete",
+          JSON.stringify({ ts: Date.now().toString(), data: athlete })
+        );
+      } catch (err) {
+        console.error("Error fetching athlete:", err);
+      } finally {
+        setAthleteLoading(false);
       }
     }
 
@@ -173,7 +216,7 @@ export default function Home() {
     }
 
     checkAuth();
-  }, [setLastRefreshed]);
+  }, [setAthlete, setLastRefreshed]);
 
   useEffect(() => {
     const errorParam = searchParams.get("error");
@@ -296,7 +339,9 @@ export default function Home() {
       ]
     );
 
-    map.current.fitBounds(bounds, { padding: 150 });
+    map.current.fitBounds(bounds, {
+      padding: { top: 100, right: 100, bottom: 250, left: 250 },
+    });
   }
 
   const filterActivities = useCallback(
@@ -396,9 +441,10 @@ export default function Home() {
 
       <div className={styles.page} ref={mapContainer} />
 
-      {(mapLoading || isAuthenticated === false || activitiesLoading) && (
-        <div className={styles.overlay} />
-      )}
+      {(mapLoading ||
+        isAuthenticated === false ||
+        athleteLoading ||
+        activitiesLoading) && <div className={styles.overlay} />}
 
       {isAuthenticated === false && (
         <Card className={styles.card}>
@@ -417,7 +463,7 @@ export default function Home() {
         </Card>
       )}
 
-      {isAuthenticated === true && activitiesLoading && (
+      {isAuthenticated === true && (athleteLoading || activitiesLoading) && (
         <Card className={styles.card}>
           <div className={styles.cardContent}>
             <Spin indicator={<LoadingOutlined spin />} size="large" />
@@ -426,7 +472,7 @@ export default function Home() {
         </Card>
       )}
 
-      {isAuthenticated === true && !activitiesLoading && (
+      {isAuthenticated === true && !athleteLoading && !activitiesLoading && (
         <>
           <Button
             className={styles.settingsButton}

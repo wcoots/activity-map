@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getBaseUrl } from "../utils";
-import { RawActivity } from "@/types";
+import { RawAthelete } from "@/types";
 
 async function refreshAccessToken() {
   const baseUrl = await getBaseUrl();
@@ -26,38 +26,27 @@ export async function GET(): Promise<NextResponse> {
     accessToken = getCookie("strava_access_token")?.value;
   }
 
-  const baseUrl = "https://www.strava.com/api/v3/athlete/activities";
-  const perPage = 200;
+  try {
+    const baseUrl = "https://www.strava.com/api/v3/athlete";
 
-  async function fetchAllPages(
-    page = 1,
-    accumulatedActivities: RawActivity[] = []
-  ) {
-    const response = await fetch(
-      `${baseUrl}?per_page=${perPage}&page=${page}`,
-      { method: "GET", headers: { Authorization: `Bearer ${accessToken}` } }
-    );
+    const response = await fetch(baseUrl, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: "Failed to fetch activities" },
+        { error: "Failed to fetch athlete" },
         { status: response.status }
       );
     }
 
-    const result: RawActivity[] = await response.json();
-    const allActivities = [...accumulatedActivities, ...result];
+    const result: RawAthelete = await response.json();
 
-    if (result.length < perPage) return allActivities;
-    return fetchAllPages(page + 1, allActivities);
-  }
-
-  try {
-    const allActivities = await fetchAllPages();
-    return NextResponse.json(allActivities);
+    return NextResponse.json(result);
   } catch {
     return NextResponse.json(
-      { error: "Failed to retrieve activities" },
+      { error: "Failed to retrieve athlete" },
       { status: 500 }
     );
   }
