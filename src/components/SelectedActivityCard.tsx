@@ -2,29 +2,43 @@
 import dayjs from "dayjs";
 
 import "@ant-design/v5-patch-for-react-19";
-import { Card } from "antd";
+import { EyeFilled } from "@ant-design/icons";
+import { Button, Card } from "antd";
 
 import { useStore } from "@/store";
 import { convertSpeedToPace, formatSeconds } from "@/utils";
 
 import styles from "./SelectedActivityCard.module.css";
 
-export default function SelectedActivityCard() {
+export default function SelectedActivityCard({
+  fitBoundsOfSelectedActivity,
+}: {
+  fitBoundsOfSelectedActivity(): void;
+}) {
   const { selectedActivity } = useStore();
   if (!selectedActivity) return null;
 
-  return (
-    <Card
-      className={styles.activityCard}
-      title={
-        <div className={styles.activityCardTitle}>
-          {selectedActivity.name}
-          <div className={styles.activityCardDate}>
-            {dayjs(selectedActivity.startDate).format("ddd D MMM YYYY")}
-          </div>
+  const header = (
+    <div className={styles.header}>
+      <div>
+        {selectedActivity.name}
+        <div className={styles.date}>
+          {dayjs(selectedActivity.startDate).format("ddd D MMM YYYY")}
         </div>
-      }
-    >
+      </div>
+      <Button
+        type="primary"
+        color="default"
+        variant="outlined"
+        size="middle"
+        icon={<EyeFilled />}
+        onClick={fitBoundsOfSelectedActivity}
+      />
+    </div>
+  );
+
+  return (
+    <Card className={styles.activityCard} title={header}>
       <strong>Type:</strong> {selectedActivity.type}
       <br />
       <strong>Distance:</strong>{" "}

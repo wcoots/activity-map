@@ -4,11 +4,15 @@
   left: 20px;
 }
 
-.activityCardTitle {
+.header {
   padding: 15px 0;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.activityCardDate {
+.date {
   font-size: 0.7em;
   color: #666;
 }

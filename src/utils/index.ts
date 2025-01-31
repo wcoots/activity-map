@@ -14,14 +14,16 @@ export function formatSeconds(seconds: number) {
   return formatted.trim();
 }
 
-export function convertSpeedToPace(metresPerSecond: number) {
+export function convertSpeedToPace(metresPerSecond: number): string {
   if (metresPerSecond <= 0) {
     throw new Error("Speed must be greater than 0.");
   }
 
   const secondsPerKilometre = 1000 / metresPerSecond;
   const minutes = Math.floor(secondsPerKilometre / 60);
-  const seconds = Math.round(secondsPerKilometre % 60);
+  const seconds = Math.round(secondsPerKilometre % 60)
+    .toString()
+    .padStart(2, "0");
 
   return `${minutes}:${seconds} /km`;
 }

@@ -282,6 +282,23 @@ export default function Home() {
     map.current.fitBounds(bounds, { padding: 20 });
   }
 
+  function fitBoundsOfSelectedActivity() {
+    if (!map.current || !selectedActivity) return;
+
+    const bounds = new LngLatBounds(
+      [
+        Math.max(...selectedActivity.positions.map((pos) => pos.lng)),
+        Math.max(...selectedActivity.positions.map((pos) => pos.lat)),
+      ],
+      [
+        Math.min(...selectedActivity.positions.map((pos) => pos.lng)),
+        Math.min(...selectedActivity.positions.map((pos) => pos.lat)),
+      ]
+    );
+
+    map.current.fitBounds(bounds, { padding: 150 });
+  }
+
   const filterActivities = useCallback(
     (activities: Activity[]): Activity[] => {
       const minimumDistanceMetres = minimumDistance * 1000;
@@ -427,7 +444,9 @@ export default function Home() {
             fitBoundsOfActivities={fitBoundsOfActivities}
           />
 
-          <SelectedActivityCard />
+          <SelectedActivityCard
+            fitBoundsOfSelectedActivity={fitBoundsOfSelectedActivity}
+          />
         </>
       )}
     </>
