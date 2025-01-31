@@ -7,6 +7,16 @@
   float: right;
 }
 
+.footer {
+  display: flex;
+  align-items: center;
+}
+
+.lastRefreshed {
+  color: #888;
+  margin-right: auto;
+}
+
 .logoutButton {
-  float: right;
+  margin-left: auto;
 }

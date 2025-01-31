@@ -32,6 +32,7 @@ export default function SettingsDrawer({
     activityTypeColourSettings,
     highestDistance,
     keywordText,
+    lastRefreshed,
     setActivityTypeSettings,
     setActivityTypeColourSettings,
     setMinimumDistance,
@@ -46,9 +47,16 @@ export default function SettingsDrawer({
   }
 
   const footer = (
-    <Button className={styles.logoutButton} danger onClick={logout}>
-      Logout
-    </Button>
+    <span className={styles.footer}>
+      {lastRefreshed && (
+        <span className={styles.lastRefreshed}>
+          Last refreshed: {dayjs(lastRefreshed).format("HH:mm ddd D MMM")}
+        </span>
+      )}
+      <Button className={styles.logoutButton} danger onClick={logout}>
+        Logout
+      </Button>
+    </span>
   );
 
   return (

@@ -3,6 +3,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Feature, FeatureCollection } from "geojson";
 import mapboxgl, { GeoJSONSource, LngLatBounds, Map } from "mapbox-gl";
+import dayjs from "dayjs";
 
 import "@ant-design/v5-patch-for-react-19";
 import { LoadingOutlined, SettingFilled } from "@ant-design/icons";
@@ -41,6 +42,7 @@ export default function Home() {
     setSelectedActivity,
     setMaximumDistance,
     setHighestDistance,
+    setLastRefreshed,
   } = useStore();
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -143,6 +145,8 @@ export default function Home() {
 
         if (cachedActivities) {
           const { ts, data } = JSON.parse(cachedActivities);
+          setLastRefreshed(dayjs(parseInt(ts, 10)).toDate());
+
           const cacheAge = Date.now() - parseInt(ts, 10);
 
           if (cacheAge < 3600000) {
@@ -156,6 +160,7 @@ export default function Home() {
 
         const result: RawActivity[] = await response.json();
         setRawActivities(result);
+        setLastRefreshed(new Date());
         localStorage.setItem(
           "activities",
           JSON.stringify({ ts: Date.now().toString(), data: result })
@@ -168,7 +173,7 @@ export default function Home() {
     }
 
     checkAuth();
-  }, []);
+  }, [setLastRefreshed]);
 
   useEffect(() => {
     const errorParam = searchParams.get("error");
@@ -273,9 +278,8 @@ export default function Home() {
       [Math.min(...longitudes), Math.min(...latitudes)]
     );
 
-    map.current.fitBounds(bounds, {
-      padding: { top: 20, left: 20, bottom: 20, right: 400 },
-    });
+    setSettingsOpen(false);
+    map.current.fitBounds(bounds, { padding: 20 });
   }
 
   const filterActivities = useCallback(

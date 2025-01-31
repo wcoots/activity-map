@@ -12,6 +12,7 @@ interface State {
   highestDistance: number;
   keywordText: string;
   year: number | null;
+  lastRefreshed: Date | null;
   setActivities: (activities: Activity[]) => void;
   setSelectedActivity: (activity: Activity | null) => void;
   setActivityTypeSettings: (
@@ -25,6 +26,7 @@ interface State {
   setHighestDistance: (highestDistance: number) => void;
   setKeywordText: (keywordText: string) => void;
   setYear: (year: number | null) => void;
+  setLastRefreshed: (lastRefreshed: Date) => void;
 }
 
 export const useStore = create<State>((set) => ({
@@ -43,6 +45,7 @@ export const useStore = create<State>((set) => ({
   highestDistance: 100,
   keywordText: "",
   year: null,
+  lastRefreshed: null,
   setActivities: (activities) => set({ activities }),
   setSelectedActivity: (selectedActivity) => set({ selectedActivity }),
   setActivityTypeSettings: (activityTypeSettings) =>
@@ -54,4 +57,5 @@ export const useStore = create<State>((set) => ({
   setHighestDistance: (highestDistance) => set({ highestDistance }),
   setKeywordText: (keywordText) => set({ keywordText }),
   setYear: (year) => set({ year }),
+  setLastRefreshed: (lastRefreshed) => set({ lastRefreshed }),
 }));
