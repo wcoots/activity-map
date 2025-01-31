@@ -10,6 +10,7 @@
 .header {
   display: flex;
   align-items: center;
+  margin-left: 16px;
 }
 
 .image {
@@ -24,6 +25,10 @@
 .lastRefreshed {
   color: #888;
   margin-right: auto;
+}
+
+.githubButton {
+  width: 20px;
 }
 
 .logoutButton {

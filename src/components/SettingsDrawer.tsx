@@ -2,6 +2,8 @@
 import dayjs from "dayjs";
 
 import "@ant-design/v5-patch-for-react-19";
+import { GithubOutlined } from "@ant-design/icons";
+
 import {
   Button,
   Checkbox,
@@ -71,6 +73,13 @@ export default function SettingsDrawer({
           Last refreshed: {dayjs(lastRefreshed).format("HH:mm ddd D MMM")}
         </span>
       )}
+      <Button
+        className={styles.githubButton}
+        href={process.env.GITHUB_URL}
+        target="_blank"
+      >
+        <GithubOutlined />
+      </Button>
       <Button className={styles.logoutButton} danger onClick={logout}>
         Logout
       </Button>
