@@ -6,9 +6,10 @@ import { EyeFilled } from "@ant-design/icons";
 import { Button, Card } from "antd";
 
 import { useStore } from "@/store";
-import { convertSpeedToPace, formatSeconds } from "@/utils";
+import { convertSpeedToPace, formatSeconds, isMobile } from "@/utils";
 
 import styles from "./SelectedActivityCard.module.css";
+import classNames from "classnames";
 
 export default function SelectedActivityCard({
   fitBoundsOfSelectedActivity,
@@ -38,7 +39,13 @@ export default function SelectedActivityCard({
   );
 
   return (
-    <Card className={styles.activityCard} title={header}>
+    <Card
+      className={classNames({
+        [styles.activityCard]: !isMobile(),
+        [styles.activityCardMobile]: isMobile(),
+      })}
+      title={header}
+    >
       <strong>Type:</strong> {selectedActivity.type}
       <br />
       <strong>Distance:</strong>{" "}

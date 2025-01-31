@@ -2,7 +2,12 @@
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Feature, FeatureCollection } from "geojson";
-import mapboxgl, { GeoJSONSource, LngLatBounds, Map } from "mapbox-gl";
+import mapboxgl, {
+  GeoJSONSource,
+  LngLatBounds,
+  Map,
+  PaddingOptions,
+} from "mapbox-gl";
 import dayjs from "dayjs";
 
 import "@ant-design/v5-patch-for-react-19";
@@ -12,7 +17,7 @@ import { Button, Card, message, Spin } from "antd";
 import { SelectedActivityCard, SettingsDrawer } from "@/components";
 import { activityTypeConfig } from "@/data";
 import { useStore } from "@/store";
-import { decodePolyline } from "@/utils";
+import { decodePolyline, isMobile } from "@/utils";
 import { Activity, Athlete, RawActivity, RawAthelete } from "@/types";
 
 import styles from "./page.module.css";
@@ -339,9 +344,11 @@ export default function Home() {
       ]
     );
 
-    map.current.fitBounds(bounds, {
-      padding: { top: 100, right: 100, bottom: 250, left: 250 },
-    });
+    const padding: PaddingOptions = isMobile()
+      ? { top: 50, right: 50, bottom: 300, left: 50 }
+      : { top: 100, right: 100, bottom: 250, left: 250 };
+
+    map.current.fitBounds(bounds, { padding });
   }
 
   const filterActivities = useCallback(

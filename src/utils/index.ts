@@ -32,3 +32,7 @@ export function decodePolyline(encoded: string): LngLat[] {
   const latLngArray = polyline.decode(encoded);
   return latLngArray.map(([lat, lng]) => new LngLat(lng, lat));
 }
+
+export function isMobile(): boolean {
+  return window.innerWidth < 768;
+}
