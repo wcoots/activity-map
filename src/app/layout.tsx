@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { Geist, Geist_Mono } from "next/font/google";
 import "antd/dist/reset.css"; // Base Ant Design styles
 import "./globals.css";
@@ -20,6 +21,8 @@ export const metadata: Metadata = {
   description: "Built by wcoots",
 };
 
+const GA_ID = process.env.GA_ID;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,6 +33,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <Wrapper>{children}</Wrapper>
       </body>
+      {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
     </html>
   );
 }
