@@ -1,5 +1,13 @@
 import { LngLat } from "mapbox-gl";
 
+export enum LocalStorageKey {
+  Athlete = "athlete",
+  Activities = "activities",
+  Theme = "theme",
+}
+
+export type Theme = "light" | "dark";
+
 export enum ActivityType {
   AlpineSki = "AlpineSki",
   BackcountrySki = "BackcountrySki",

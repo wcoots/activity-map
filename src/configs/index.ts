@@ -1,19 +1,20 @@
-import { ActivityType, Label } from "@/types";
+import { ActivityType, Label, Theme } from "@/types";
+import { MappingAlgorithm, theme as themes } from "antd";
 
 export const activityTypeConfig: {
   label: Label;
   activityTypes: ActivityType[];
-  colour: string;
+  colour: { [key in Theme]: string };
 }[] = [
   {
     label: "Walks",
     activityTypes: [ActivityType.Hike, ActivityType.Walk],
-    colour: "#e08906",
+    colour: { dark: "#e08906", light: "#cc5500" },
   },
   {
     label: "Runs",
     activityTypes: [ActivityType.Run, ActivityType.TrailRun],
-    colour: "#da1e28",
+    colour: { dark: "#da1e28", light: "#a71b22" },
   },
   {
     label: "Rides",
@@ -29,7 +30,7 @@ export const activityTypeConfig: {
       ActivityType.Velomobile,
       ActivityType.Wheelchair,
     ],
-    colour: "#3cb043",
+    colour: { dark: "#3cb043", light: "#2a7c30" },
   },
   {
     label: "Snowsports",
@@ -42,7 +43,7 @@ export const activityTypeConfig: {
       ActivityType.Snowboard,
       ActivityType.Snowshoe,
     ],
-    colour: "#bf40bf",
+    colour: { dark: "#bf40bf", light: "#8c308c" },
   },
   {
     label: "Watersports",
@@ -57,7 +58,7 @@ export const activityTypeConfig: {
       ActivityType.Swim,
       ActivityType.Windsurf,
     ],
-    colour: "#00a1e4",
+    colour: { dark: "#00a1e4", light: "#0077ab" },
   },
   {
     label: "Other",
@@ -83,6 +84,31 @@ export const activityTypeConfig: {
       ActivityType.Workout,
       ActivityType.Yoga,
     ],
-    colour: "#bbbbbb",
+    colour: { dark: "#bbbbbb", light: "#888888" },
   },
 ];
+
+export const themeConfig: {
+  [key in Theme]: {
+    style: string;
+    borderColour: string;
+    toggle: Theme;
+    algorithm: MappingAlgorithm;
+    primaryColour: string;
+  };
+} = {
+  light: {
+    style: "mapbox://styles/mapbox/light-v11",
+    borderColour: "black",
+    toggle: "dark",
+    algorithm: themes.defaultAlgorithm,
+    primaryColour: "#4A6691",
+  },
+  dark: {
+    style: "mapbox://styles/mapbox/dark-v11",
+    borderColour: "white",
+    toggle: "light",
+    algorithm: themes.darkAlgorithm,
+    primaryColour: "#6082B6",
+  },
+};

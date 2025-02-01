@@ -16,7 +16,7 @@ import {
 } from "antd";
 
 import { useStore } from "@/store";
-import { Label } from "@/types";
+import { Label, LocalStorageKey } from "@/types";
 
 import styles from "./SettingsDrawer.module.css";
 
@@ -30,6 +30,7 @@ export default function SettingsDrawer({
   fitBoundsOfActivities: () => void;
 }) {
   const {
+    theme,
     athlete,
     activityTypeSettings,
     activityTypeColourSettings,
@@ -46,8 +47,8 @@ export default function SettingsDrawer({
 
   function logout() {
     window.location.href = "/api/auth/logout";
-    localStorage.removeItem("athlete");
-    localStorage.removeItem("activities");
+    localStorage.removeItem(LocalStorageKey.Athlete);
+    localStorage.removeItem(LocalStorageKey.Activities);
   }
 
   const header = athlete ? (
@@ -112,7 +113,7 @@ export default function SettingsDrawer({
 
             <ColourPicker
               className={styles.colourPicker}
-              value={activityTypeColourSettings[label as Label]}
+              value={activityTypeColourSettings[label as Label][theme]}
               size="small"
               disabledAlpha
               disabledFormat
@@ -165,6 +166,7 @@ export default function SettingsDrawer({
       />
 
       <Divider />
+
       <Button onClick={fitBoundsOfActivities}>Fit Bounds</Button>
     </Drawer>
   );

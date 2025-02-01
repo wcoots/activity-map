@@ -1,17 +1,21 @@
 "use client";
 
 import React, { Suspense } from "react";
-import { ConfigProvider, theme } from "antd";
+import { ConfigProvider } from "antd";
+
+import { useStore } from "@/store";
+import { themeConfig } from "@/configs";
 
 export default function Wrapper(props: { children: React.ReactNode }) {
   const { children } = props;
+  const { theme } = useStore();
 
   return (
     <Suspense>
       <ConfigProvider
         theme={{
-          algorithm: theme.darkAlgorithm,
-          token: { colorPrimary: "#6082B6" },
+          algorithm: themeConfig[theme].algorithm,
+          token: { colorPrimary: themeConfig[theme].primaryColour },
         }}
       >
         {children}

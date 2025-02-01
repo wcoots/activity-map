@@ -1,19 +1,21 @@
-import { activityTypeConfig } from "@/data";
-import { Athlete, Activity, Label } from "@/types";
+import { activityTypeConfig } from "@/configs";
+import { Athlete, Activity, Label, Theme } from "@/types";
 import { create } from "zustand";
 
 interface State {
+  theme: Theme;
   athlete: Athlete | null;
   activities: Activity[];
   selectedActivity: Activity | null;
   activityTypeSettings: Record<Label, boolean>;
-  activityTypeColourSettings: Record<Label, string>;
+  activityTypeColourSettings: Record<Label, { [key in Theme]: string }>;
   minimumDistance: number;
   maximumDistance: number;
   highestDistance: number;
   keywordText: string;
   year: number | null;
   lastRefreshed: Date | null;
+  setTheme: (theme: Theme) => void;
   setAthlete: (athlete: Athlete | null) => void;
   setActivities: (activities: Activity[]) => void;
   setSelectedActivity: (activity: Activity | null) => void;
@@ -21,7 +23,7 @@ interface State {
     activityTypeSettings: Record<Label, boolean>
   ) => void;
   setActivityTypeColourSettings: (
-    activityTypeColourSettings: Record<Label, string>
+    activityTypeColourSettings: Record<Label, { [key in Theme]: string }>
   ) => void;
   setMinimumDistance: (minimumDistance: number) => void;
   setMaximumDistance: (maximumDistance: number) => void;
@@ -32,6 +34,7 @@ interface State {
 }
 
 export const useStore = create<State>((set) => ({
+  theme: "dark",
   athlete: null,
   activities: [],
   selectedActivity: null,
@@ -41,7 +44,7 @@ export const useStore = create<State>((set) => ({
   ),
   activityTypeColourSettings: activityTypeConfig.reduce(
     (acc, config) => ({ ...acc, [config.label]: config.colour }),
-    {} as Record<Label, string>
+    {} as Record<Label, { [key in Theme]: string }>
   ),
   minimumDistance: 0,
   maximumDistance: 100,
@@ -49,6 +52,7 @@ export const useStore = create<State>((set) => ({
   keywordText: "",
   year: null,
   lastRefreshed: null,
+  setTheme: (theme) => set({ theme }),
   setAthlete: (athlete) => set({ athlete }),
   setActivities: (activities) => set({ activities }),
   setSelectedActivity: (selectedActivity) => set({ selectedActivity }),

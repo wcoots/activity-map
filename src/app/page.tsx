@@ -11,14 +11,26 @@ import mapboxgl, {
 import dayjs from "dayjs";
 
 import "@ant-design/v5-patch-for-react-19";
-import { LoadingOutlined, SettingFilled } from "@ant-design/icons";
-import { Button, Card, message, Spin } from "antd";
+import {
+  LoadingOutlined,
+  MoonFilled,
+  SettingFilled,
+  SunFilled,
+} from "@ant-design/icons";
+import { Button, Card, message, Spin, Switch, Tooltip } from "antd";
 
 import { SelectedActivityCard, SettingsDrawer } from "@/components";
-import { activityTypeConfig } from "@/data";
+import { activityTypeConfig, themeConfig } from "@/configs";
 import { useStore } from "@/store";
 import { decodePolyline, isMobile } from "@/utils";
-import { Activity, Athlete, RawActivity, RawAthelete } from "@/types";
+import {
+  Activity,
+  Athlete,
+  LocalStorageKey,
+  RawActivity,
+  RawAthelete,
+  Theme,
+} from "@/types";
 
 import styles from "./page.module.css";
 
@@ -35,6 +47,7 @@ export default function Home() {
   const [messageApi, contextHolder] = message.useMessage();
 
   const {
+    theme,
     activities,
     selectedActivity,
     activityTypeSettings,
@@ -43,6 +56,7 @@ export default function Home() {
     maximumDistance,
     keywordText,
     year,
+    setTheme,
     setAthlete,
     setActivities,
     setSelectedActivity,
@@ -58,7 +72,50 @@ export default function Home() {
   const [rawActivities, setRawActivities] = useState<RawActivity[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  function toggleTheme() {
+    const { toggle } = themeConfig[theme];
+    localStorage.setItem(LocalStorageKey.Theme, toggle);
+    setTheme(toggle);
+  }
+
+  const createMapLayers = useCallback(() => {
+    if (!map.current) return;
+
+    if (!map.current.getLayer(ACTIVITY_LAYER)) {
+      map.current.addLayer({
+        id: ACTIVITY_LAYER,
+        source: ACTIVITY_SOURCE,
+        filter: ["==", ["get", "selected"], false],
+        type: "line",
+        paint: {
+          "line-color": ["get", "colour"],
+          "line-width": 3,
+          "line-blur": 2,
+        },
+      });
+    }
+
+    if (!map.current.getLayer(SELECTED_ACTIVITY_LAYER)) {
+      map.current.addLayer({
+        id: SELECTED_ACTIVITY_LAYER,
+        source: ACTIVITY_SOURCE,
+        filter: ["==", ["get", "selected"], true],
+        type: "line",
+        paint: {
+          "line-color": ["get", "colour"],
+          "line-width": 4,
+          "line-border-color": themeConfig[theme].borderColour,
+          "line-border-width": 1,
+        },
+      });
+    }
+  }, [theme]);
+
   useEffect(() => {
+    const localTheme = localStorage.getItem(LocalStorageKey.Theme);
+    if (localTheme && Object.keys(themeConfig).includes(localTheme))
+      setTheme(localTheme as Theme);
+
     // Map preparation useEffect. Called once on component mount.
     if (map.current || !mapContainer.current) return;
 
@@ -66,7 +123,7 @@ export default function Home() {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/dark-v11",
+      style: themeConfig[theme].style,
       center: [-4, 54.2],
       zoom: 5,
       attributionControl: false,
@@ -86,34 +143,7 @@ export default function Home() {
         });
       }
 
-      if (!map.current.getLayer(ACTIVITY_LAYER)) {
-        map.current.addLayer({
-          id: ACTIVITY_LAYER,
-          source: ACTIVITY_SOURCE,
-          filter: ["==", ["get", "selected"], false],
-          type: "line",
-          paint: {
-            "line-color": ["get", "colour"],
-            "line-width": 3,
-            "line-blur": 2,
-          },
-        });
-      }
-
-      if (!map.current.getLayer(SELECTED_ACTIVITY_LAYER)) {
-        map.current.addLayer({
-          id: SELECTED_ACTIVITY_LAYER,
-          source: ACTIVITY_SOURCE,
-          filter: ["==", ["get", "selected"], true],
-          type: "line",
-          paint: {
-            "line-color": ["get", "colour"],
-            "line-width": 4,
-            "line-border-color": "white",
-            "line-border-width": 1,
-          },
-        });
-      }
+      createMapLayers();
 
       map.current.on("mouseenter", INTERACTIVE_LAYERS, () => {
         if (map.current) map.current.getCanvas().style.cursor = "pointer";
@@ -125,7 +155,7 @@ export default function Home() {
 
       setMapLoading(false);
     });
-  }, []);
+  }, [theme, setTheme, createMapLayers]);
 
   useEffect(() => {
     // Authentication and activity fetching useEffect. Called once on component mount.
@@ -148,7 +178,7 @@ export default function Home() {
     async function fetchAthlete() {
       try {
         setAthleteLoading(true);
-        const cachedAthlete = localStorage.getItem("athlete");
+        const cachedAthlete = localStorage.getItem(LocalStorageKey.Athlete);
 
         if (cachedAthlete) {
           const { ts, data } = JSON.parse(cachedAthlete);
@@ -176,7 +206,7 @@ export default function Home() {
         setAthlete(athlete);
 
         localStorage.setItem(
-          "athlete",
+          LocalStorageKey.Athlete,
           JSON.stringify({ ts: Date.now().toString(), data: athlete })
         );
       } catch (err) {
@@ -189,7 +219,9 @@ export default function Home() {
     async function fetchActivities() {
       try {
         setActivitiesLoading(true);
-        const cachedActivities = localStorage.getItem("activities");
+        const cachedActivities = localStorage.getItem(
+          LocalStorageKey.Activities
+        );
 
         if (cachedActivities) {
           const { ts, data } = JSON.parse(cachedActivities);
@@ -210,7 +242,7 @@ export default function Home() {
         setRawActivities(result);
         setLastRefreshed(new Date());
         localStorage.setItem(
-          "activities",
+          LocalStorageKey.Activities,
           JSON.stringify({ ts: Date.now().toString(), data: result })
         );
       } catch (err) {
@@ -229,6 +261,21 @@ export default function Home() {
       messageApi.open({ type: "error", content: "Authentication Cancelled" });
     }
   }, [searchParams, messageApi]);
+
+  useEffect(() => {
+    // Map theme useEffect. Called whenever theme changes.
+    if (map.current) {
+      const sourceData = map.current.getSource(ACTIVITY_SOURCE)?.serialize();
+      map.current.setStyle(themeConfig[theme].style);
+
+      map.current.once("style.load", () => {
+        if (sourceData) {
+          map.current!.addSource(ACTIVITY_SOURCE, sourceData);
+          createMapLayers();
+        }
+      });
+    }
+  }, [theme, createMapLayers]);
 
   useEffect(() => {
     // Activities preparation useEffect. Called once on activities load.
@@ -408,7 +455,7 @@ export default function Home() {
 
           if (!configItem) return acc;
 
-          const colour = activityTypeColourSettings[configItem.label];
+          const colour = activityTypeColourSettings[configItem.label][theme];
 
           if (!colour) return acc;
 
@@ -435,6 +482,7 @@ export default function Home() {
       ?.getSource<GeoJSONSource>(ACTIVITY_SOURCE)
       ?.setData(activityFeatureCollection);
   }, [
+    theme,
     activities,
     activityTypeSettings,
     activityTypeColourSettings,
@@ -481,15 +529,31 @@ export default function Home() {
 
       {isAuthenticated === true && !athleteLoading && !activitiesLoading && (
         <>
-          <Button
-            className={styles.settingsButton}
-            type="primary"
-            color="default"
-            variant="solid"
-            size="large"
-            icon={<SettingFilled />}
-            onClick={() => setSettingsOpen(true)}
-          />
+          <Tooltip
+            placement="right"
+            title={`toggle to ${themeConfig[theme].toggle} theme`}
+            arrow={false}
+          >
+            <Switch
+              className={styles.themeButton}
+              checkedChildren={<SunFilled />}
+              unCheckedChildren={<MoonFilled />}
+              checked={theme === "light"}
+              onChange={toggleTheme}
+            />
+          </Tooltip>
+
+          <Tooltip placement="left" title="settings" arrow={false}>
+            <Button
+              className={styles.settingsButton}
+              type="primary"
+              color="primary"
+              variant="solid"
+              size="large"
+              icon={<SettingFilled />}
+              onClick={() => setSettingsOpen(true)}
+            />
+          </Tooltip>
 
           <SettingsDrawer
             open={settingsOpen}
