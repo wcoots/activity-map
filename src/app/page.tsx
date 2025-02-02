@@ -72,14 +72,15 @@ export default function Home() {
   const [rawActivities, setRawActivities] = useState<RawActivity[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  function toggleTheme() {
-    const { toggle } = themeConfig[theme];
-    localStorage.setItem(LocalStorageKey.Theme, toggle);
-    setTheme(toggle);
-  }
-
   const createMapLayers = useCallback(() => {
     if (!map.current) return;
+
+    if (!map.current!.getSource(ACTIVITY_SOURCE)) {
+      map.current!.addSource(ACTIVITY_SOURCE, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+    }
 
     if (!map.current.getLayer(ACTIVITY_LAYER)) {
       map.current.addLayer({
@@ -111,6 +112,145 @@ export default function Home() {
     }
   }, [theme]);
 
+  const filterActivities = useCallback(
+    (activities: Activity[]): Activity[] => {
+      const minimumDistanceMetres = minimumDistance * 1000;
+      const maximumDistanceMetres = maximumDistance * 1000;
+
+      const filteredActivities = activities.filter((activity) => {
+        const configItem = activityTypeConfig.find((config) =>
+          config.activityTypes.includes(activity.type)
+        );
+
+        if (!configItem) return;
+
+        const typeSelected = activityTypeSettings[configItem.label];
+        const distanceInRange =
+          activity.distance >= minimumDistanceMetres &&
+          activity.distance <= maximumDistanceMetres;
+        const textMatch = keywordText.length
+          ? activity.name.toLowerCase().includes(keywordText.toLowerCase())
+          : true;
+        const yearMatch = year
+          ? activity.startDate.getFullYear() === year
+          : true;
+
+        return typeSelected && distanceInRange && textMatch && yearMatch;
+      });
+
+      if (!filteredActivities.find(({ id }) => id === selectedActivity?.id)) {
+        setSelectedActivity(null);
+      }
+
+      return filteredActivities;
+    },
+    [
+      activityTypeSettings,
+      minimumDistance,
+      maximumDistance,
+      keywordText,
+      year,
+      selectedActivity,
+      setSelectedActivity,
+    ]
+  );
+
+  const populateSource = useCallback(() => {
+    const activityFeatureCollection: FeatureCollection = {
+      type: "FeatureCollection",
+      features: filterActivities(activities).reduce(
+        (acc: Feature[], activity) => {
+          const configItem = activityTypeConfig.find((config) =>
+            config.activityTypes.includes(activity.type)
+          );
+
+          if (!configItem) return acc;
+
+          const colour = activityTypeColourSettings[configItem.label][theme];
+
+          if (!colour) return acc;
+
+          const feature: Feature = {
+            type: "Feature",
+            properties: {
+              id: activity.id,
+              colour,
+              selected: activity.id === selectedActivity?.id,
+            },
+            geometry: {
+              type: "LineString",
+              coordinates: activity.positions.map((pos) => [pos.lng, pos.lat]),
+            },
+          };
+
+          return [...acc, feature];
+        },
+        []
+      ),
+    };
+
+    map.current
+      ?.getSource<GeoJSONSource>(ACTIVITY_SOURCE)
+      ?.setData(activityFeatureCollection);
+  }, [
+    theme,
+    activities,
+    activityTypeColourSettings,
+    filterActivities,
+    selectedActivity,
+  ]);
+
+  function toggleTheme() {
+    const { toggle } = themeConfig[theme];
+    localStorage.setItem(LocalStorageKey.Theme, toggle);
+    setTheme(toggle);
+  }
+
+  function fitBoundsOfActivities() {
+    if (!map.current) return;
+
+    const filteredActivities = filterActivities(activities);
+
+    if (!filteredActivities.length) return;
+
+    const longitudes = filteredActivities.flatMap((activity) =>
+      activity.positions.map((pos) => pos.lng)
+    );
+
+    const latitudes = filteredActivities.flatMap((activity) =>
+      activity.positions.map((pos) => pos.lat)
+    );
+
+    const bounds = new LngLatBounds(
+      [Math.max(...longitudes), Math.max(...latitudes)],
+      [Math.min(...longitudes), Math.min(...latitudes)]
+    );
+
+    setSettingsOpen(false);
+    map.current.fitBounds(bounds, { padding: 20 });
+  }
+
+  function fitBoundsOfSelectedActivity() {
+    if (!map.current || !selectedActivity) return;
+
+    const bounds = new LngLatBounds(
+      [
+        Math.max(...selectedActivity.positions.map((pos) => pos.lng)),
+        Math.max(...selectedActivity.positions.map((pos) => pos.lat)),
+      ],
+      [
+        Math.min(...selectedActivity.positions.map((pos) => pos.lng)),
+        Math.min(...selectedActivity.positions.map((pos) => pos.lat)),
+      ]
+    );
+
+    const padding: PaddingOptions = isMobile()
+      ? { top: 50, right: 50, bottom: 300, left: 50 }
+      : { top: 100, right: 100, bottom: 250, left: 250 };
+
+    map.current.fitBounds(bounds, { padding });
+  }
+
   useEffect(() => {
     const localTheme = localStorage.getItem(LocalStorageKey.Theme);
     if (localTheme && Object.keys(themeConfig).includes(localTheme))
@@ -135,13 +275,6 @@ export default function Home() {
       map.current.dragRotate.disable();
       map.current.touchZoomRotate.disableRotation();
       map.current.touchPitch.disable();
-
-      if (!map.current.getSource(ACTIVITY_SOURCE)) {
-        map.current.addSource(ACTIVITY_SOURCE, {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [] },
-        });
-      }
 
       createMapLayers();
 
@@ -256,26 +389,12 @@ export default function Home() {
   }, [setAthlete, setLastRefreshed]);
 
   useEffect(() => {
+    // Authentication error useEffect. Called once on component mount.
     const errorParam = searchParams.get("error");
     if (errorParam) {
       messageApi.open({ type: "error", content: "Authentication Cancelled" });
     }
   }, [searchParams, messageApi]);
-
-  useEffect(() => {
-    // Map theme useEffect. Called whenever theme changes.
-    if (map.current) {
-      const sourceData = map.current.getSource(ACTIVITY_SOURCE)?.serialize();
-      map.current.setStyle(themeConfig[theme].style);
-
-      map.current.once("style.load", () => {
-        if (sourceData) {
-          map.current!.addSource(ACTIVITY_SOURCE, sourceData);
-          createMapLayers();
-        }
-      });
-    }
-  }, [theme, createMapLayers]);
 
   useEffect(() => {
     // Activities preparation useEffect. Called once on activities load.
@@ -353,142 +472,23 @@ export default function Home() {
     setMaximumDistance,
   ]);
 
-  function fitBoundsOfActivities() {
-    if (!map.current) return;
+  useEffect(() => {
+    // Map theme useEffect. Called whenever theme changes.
+    if (map.current) {
+      map.current.setStyle(themeConfig[theme].style);
 
-    const filteredActivities = filterActivities(activities);
-
-    if (!filteredActivities.length) return;
-
-    const longitudes = filteredActivities.flatMap((activity) =>
-      activity.positions.map((pos) => pos.lng)
-    );
-
-    const latitudes = filteredActivities.flatMap((activity) =>
-      activity.positions.map((pos) => pos.lat)
-    );
-
-    const bounds = new LngLatBounds(
-      [Math.max(...longitudes), Math.max(...latitudes)],
-      [Math.min(...longitudes), Math.min(...latitudes)]
-    );
-
-    setSettingsOpen(false);
-    map.current.fitBounds(bounds, { padding: 20 });
-  }
-
-  function fitBoundsOfSelectedActivity() {
-    if (!map.current || !selectedActivity) return;
-
-    const bounds = new LngLatBounds(
-      [
-        Math.max(...selectedActivity.positions.map((pos) => pos.lng)),
-        Math.max(...selectedActivity.positions.map((pos) => pos.lat)),
-      ],
-      [
-        Math.min(...selectedActivity.positions.map((pos) => pos.lng)),
-        Math.min(...selectedActivity.positions.map((pos) => pos.lat)),
-      ]
-    );
-
-    const padding: PaddingOptions = isMobile()
-      ? { top: 50, right: 50, bottom: 300, left: 50 }
-      : { top: 100, right: 100, bottom: 250, left: 250 };
-
-    map.current.fitBounds(bounds, { padding });
-  }
-
-  const filterActivities = useCallback(
-    (activities: Activity[]): Activity[] => {
-      const minimumDistanceMetres = minimumDistance * 1000;
-      const maximumDistanceMetres = maximumDistance * 1000;
-
-      const filteredActivities = activities.filter((activity) => {
-        const configItem = activityTypeConfig.find((config) =>
-          config.activityTypes.includes(activity.type)
-        );
-
-        if (!configItem) return;
-
-        const typeSelected = activityTypeSettings[configItem.label];
-        const distanceInRange =
-          activity.distance >= minimumDistanceMetres &&
-          activity.distance <= maximumDistanceMetres;
-        const textMatch = keywordText.length
-          ? activity.name.toLowerCase().includes(keywordText.toLowerCase())
-          : true;
-        const yearMatch = year
-          ? activity.startDate.getFullYear() === year
-          : true;
-
-        return typeSelected && distanceInRange && textMatch && yearMatch;
+      map.current.once("style.load", () => {
+        createMapLayers();
+        populateSource();
       });
-
-      if (!filteredActivities.find(({ id }) => id === selectedActivity?.id)) {
-        setSelectedActivity(null);
-      }
-
-      return filteredActivities;
-    },
-    [
-      activityTypeSettings,
-      minimumDistance,
-      maximumDistance,
-      keywordText,
-      year,
-      selectedActivity,
-      setSelectedActivity,
-    ]
-  );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme, createMapLayers]);
 
   useEffect(() => {
     // Activities update useEffect. Called whenever activities or filters change.
-    if (!map.current) return;
-
-    const activityFeatureCollection: FeatureCollection = {
-      type: "FeatureCollection",
-      features: filterActivities(activities).reduce(
-        (acc: Feature[], activity) => {
-          const configItem = activityTypeConfig.find((config) =>
-            config.activityTypes.includes(activity.type)
-          );
-
-          if (!configItem) return acc;
-
-          const colour = activityTypeColourSettings[configItem.label][theme];
-
-          if (!colour) return acc;
-
-          const feature: Feature = {
-            type: "Feature",
-            properties: {
-              id: activity.id,
-              colour,
-              selected: activity.id === selectedActivity?.id,
-            },
-            geometry: {
-              type: "LineString",
-              coordinates: activity.positions.map((pos) => [pos.lng, pos.lat]),
-            },
-          };
-
-          return [...acc, feature];
-        },
-        []
-      ),
-    };
-
-    map.current
-      ?.getSource<GeoJSONSource>(ACTIVITY_SOURCE)
-      ?.setData(activityFeatureCollection);
-  }, [
-    theme,
-    activities,
-    activityTypeSettings,
-    activityTypeColourSettings,
-    filterActivities,
-    selectedActivity,
-  ]);
+    populateSource();
+  }, [populateSource]);
 
   return (
     <>
