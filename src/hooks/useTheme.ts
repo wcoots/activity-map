@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import { useStore } from "@/store";
+import { useMapStore } from "@/store";
 import { LocalStorageKey, Theme } from "@/types";
 import { themeConfig } from "@/configs";
 
 export function useTheme() {
-  const { theme, setTheme } = useStore();
+  const { theme, setTheme } = useMapStore();
 
   useEffect(() => {
     const localTheme = localStorage.getItem(LocalStorageKey.Theme);

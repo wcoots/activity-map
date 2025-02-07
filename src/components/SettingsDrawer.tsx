@@ -3,7 +3,6 @@ import dayjs from "dayjs";
 
 import "@ant-design/v5-patch-for-react-19";
 import { GithubOutlined } from "@ant-design/icons";
-
 import {
   Button,
   Checkbox,
@@ -15,7 +14,8 @@ import {
   Slider,
 } from "antd";
 
-import { useStore } from "@/store";
+import { activityTypeConfig } from "@/configs";
+import { useActivityStore, useAuthStore, useMapStore } from "@/store";
 import { Label, LocalStorageKey } from "@/types";
 
 import styles from "./SettingsDrawer.module.css";
@@ -29,11 +29,9 @@ export default function SettingsDrawer({
   setOpen: (open: boolean) => void;
   fitBoundsOfActivities: () => void;
 }) {
+  const { athlete } = useAuthStore();
   const {
-    theme,
-    athlete,
     activityTypeSettings,
-    activityTypeColourSettings,
     highestDistance,
     keywordText,
     lastRefreshed,
@@ -42,7 +40,9 @@ export default function SettingsDrawer({
     setMaximumDistance,
     setKeywordText,
     setYear,
-  } = useStore();
+  } = useActivityStore();
+
+  const { theme } = useMapStore();
 
   function logout() {
     window.location.href = "/api/auth/logout";
@@ -112,7 +112,11 @@ export default function SettingsDrawer({
 
             <ColourPicker
               className={styles.colourPicker}
-              value={activityTypeColourSettings[label as Label][theme]}
+              value={
+                activityTypeConfig.find(
+                  (config) => config.label === (label as Label)
+                )?.colour[theme]
+              }
               open={false}
               size="small"
             />

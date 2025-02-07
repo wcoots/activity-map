@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { message } from "antd";
 import dayjs from "dayjs";
 
-import { useStore } from "@/store";
+import { useAuthStore, useActivityStore } from "@/store";
 import { decodePolyline } from "@/utils";
 import {
   LocalStorageKey,
@@ -18,14 +18,9 @@ export function useAuth() {
   const searchParams = useSearchParams();
   const [messageApi, contextHolder] = message.useMessage();
 
-  const {
-    setIsAuthenticated,
-    setAthleteLoading,
-    setActivitiesLoading,
-    setAthlete,
-    setActivities,
-    setLastRefreshed,
-  } = useStore();
+  const { setIsAuthenticated, setAthleteLoading, setAthlete } = useAuthStore();
+  const { setActivitiesLoading, setActivities, setLastRefreshed } =
+    useActivityStore();
 
   useEffect(() => {
     // Check authentication status and fetch athlete/activities if authenticated

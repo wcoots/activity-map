@@ -3,12 +3,12 @@
 import React, { Suspense } from "react";
 import { ConfigProvider } from "antd";
 
-import { useStore } from "@/store";
 import { themeConfig } from "@/configs";
+import { useMapStore } from "@/store";
 
 export default function Wrapper(props: { children: React.ReactNode }) {
   const { children } = props;
-  const { theme } = useStore();
+  const { theme } = useMapStore();
 
   return (
     <Suspense>

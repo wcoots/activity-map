@@ -11,11 +11,15 @@ import { Button, Card, Spin, Switch, Tooltip } from "antd";
 
 import { SelectedActivityCard, SettingsDrawer } from "@/components";
 import { themeConfig } from "@/configs";
-import { useTheme } from "@/hooks/useTheme";
+import { useMap, useTheme } from "@/hooks";
+import {
+  useActivityStore,
+  useAuthStore,
+  useMapStore,
+  useUIStore,
+} from "@/store";
 
 import styles from "./page.module.css";
-import { useMap } from "@/hooks/useMap";
-import { useStore } from "@/store";
 
 export default function Home() {
   const { toggleTheme } = useTheme();
@@ -26,15 +30,10 @@ export default function Home() {
     fitBoundsOfActivities,
   } = useMap();
 
-  const {
-    athleteLoading,
-    mapLoading,
-    settingsOpen,
-    activitiesLoading,
-    isAuthenticated,
-    theme,
-    setSettingsOpen,
-  } = useStore();
+  const { activitiesLoading } = useActivityStore();
+  const { isAuthenticated, athleteLoading } = useAuthStore();
+  const { mapLoading, theme } = useMapStore();
+  const { settingsOpen, setSettingsOpen } = useUIStore();
 
   return (
     <>

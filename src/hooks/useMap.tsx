@@ -9,8 +9,8 @@ import mapboxgl, {
 } from "mapbox-gl";
 
 import { activityTypeConfig, themeConfig } from "@/configs";
-import { useAuth } from "@/hooks/useAuth";
-import { useStore } from "@/store";
+import { useAuth } from "@/hooks";
+import { useActivityStore, useMapStore, useUIStore } from "@/store";
 import { isMobile } from "@/utils";
 import { Activity } from "@/types";
 
@@ -32,27 +32,26 @@ export function useMap() {
   const map = useRef<Map | null>(null);
 
   const {
-    mapLoading,
-    theme,
     activities,
     filteredActivityIds,
     hoveredActivityId,
     selectedActivityId,
     activityTypeSettings,
-    activityTypeColourSettings,
     minimumDistance,
     maximumDistance,
     keywordText,
     year,
-    setMapLoading,
-    setSettingsOpen,
     setActivities,
     setFilteredActivityIds,
     setHoveredActivityId,
     setSelectedActivityId,
     setMaximumDistance,
     setHighestDistance,
-  } = useStore();
+  } = useActivityStore();
+
+  const { mapLoading, theme, setMapLoading } = useMapStore();
+
+  const { setSettingsOpen } = useUIStore();
 
   const createMapLayers = useCallback(() => {
     if (!map.current) return;
@@ -185,7 +184,7 @@ export function useMap() {
 
           if (!configItem) return acc;
 
-          const colour = activityTypeColourSettings[configItem.label][theme];
+          const colour = configItem.colour[theme];
           const borderColour = themeConfig[theme].borderColour;
 
           if (!colour) return acc;
@@ -217,7 +216,6 @@ export function useMap() {
   }, [
     theme,
     activities,
-    activityTypeColourSettings,
     filterActivities,
     hoveredActivityId,
     selectedActivityId,
@@ -314,7 +312,7 @@ export function useMap() {
 
       setMapLoading(false);
     });
-  }, [theme, activities, setHoveredActivityId, createMapLayers]);
+  }, [theme, activities, setHoveredActivityId, createMapLayers, setMapLoading]);
 
   useEffect(() => {
     // Activities preparation useEffect. Called once on activities load.

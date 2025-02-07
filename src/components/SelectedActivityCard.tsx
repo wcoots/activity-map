@@ -1,26 +1,29 @@
 "use client";
 import dayjs from "dayjs";
+import classNames from "classnames";
 
 import "@ant-design/v5-patch-for-react-19";
 import { EyeFilled } from "@ant-design/icons";
 import { Button, Card } from "antd";
 
-import { useStore } from "@/store";
+import { useActivityStore } from "@/store";
 import { convertSpeedToPace, formatSeconds, isMobile } from "@/utils";
 
 import styles from "./SelectedActivityCard.module.css";
-import classNames from "classnames";
 
 export default function SelectedActivityCard({
   fitBoundsOfSelectedActivity,
 }: {
   fitBoundsOfSelectedActivity(): void;
 }) {
-  const { selectedActivityId, activities } = useStore();
+  const { selectedActivityId, activities } = useActivityStore();
+
   if (!selectedActivityId) return null;
+
   const selectedActivity = activities.find(
     (activity) => activity.id === selectedActivityId
   );
+
   if (!selectedActivity) return null;
 
   const header = (
