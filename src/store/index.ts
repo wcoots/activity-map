@@ -6,6 +6,7 @@ interface State {
   theme: Theme;
   athlete: Athlete | null;
   activities: Activity[];
+  filteredActivityIds: number[];
   hoveredActivityId: number | null;
   selectedActivityId: number | null;
   activityTypeSettings: Record<Label, boolean>;
@@ -19,6 +20,7 @@ interface State {
   setTheme: (theme: Theme) => void;
   setAthlete: (athlete: Athlete | null) => void;
   setActivities: (activities: Activity[]) => void;
+  setFilteredActivityIds: (activityIds: number[]) => void;
   setHoveredActivityId: (activityId: number | null) => void;
   setSelectedActivityId: (activityId: number | null) => void;
   setActivityTypeSettings: (
@@ -36,6 +38,7 @@ export const useStore = create<State>((set) => ({
   theme: "dark",
   athlete: null,
   activities: [],
+  filteredActivityIds: [],
   hoveredActivityId: null,
   selectedActivityId: null,
   activityTypeSettings: activityTypeConfig.reduce(
@@ -55,6 +58,8 @@ export const useStore = create<State>((set) => ({
   setTheme: (theme) => set({ theme }),
   setAthlete: (athlete) => set({ athlete }),
   setActivities: (activities) => set({ activities }),
+  setFilteredActivityIds: (activityIds) =>
+    set({ filteredActivityIds: activityIds }),
   setHoveredActivityId: (hoveredActivityId) => set({ hoveredActivityId }),
   setSelectedActivityId: (selectedActivityId) => set({ selectedActivityId }),
   setActivityTypeSettings: (activityTypeSettings) =>
