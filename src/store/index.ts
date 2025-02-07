@@ -24,9 +24,6 @@ interface State {
   setActivityTypeSettings: (
     activityTypeSettings: Record<Label, boolean>
   ) => void;
-  setActivityTypeColourSettings: (
-    activityTypeColourSettings: Record<Label, { [key in Theme]: string }>
-  ) => void;
   setMinimumDistance: (minimumDistance: number) => void;
   setMaximumDistance: (maximumDistance: number) => void;
   setHighestDistance: (highestDistance: number) => void;
@@ -62,8 +59,6 @@ export const useStore = create<State>((set) => ({
   setSelectedActivityId: (selectedActivityId) => set({ selectedActivityId }),
   setActivityTypeSettings: (activityTypeSettings) =>
     set({ activityTypeSettings }),
-  setActivityTypeColourSettings: (activityTypeColourSettings) =>
-    set({ activityTypeColourSettings }),
   setMinimumDistance: (minimumDistance) => set({ minimumDistance }),
   setMaximumDistance: (maximumDistance) => set({ maximumDistance }),
   setHighestDistance: (highestDistance) => set({ highestDistance }),

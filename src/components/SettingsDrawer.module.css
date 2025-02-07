@@ -5,6 +5,7 @@
 
 .colourPicker {
   float: right;
+  pointer-events: none;
 }
 
 .header {

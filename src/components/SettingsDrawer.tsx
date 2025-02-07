@@ -38,7 +38,6 @@ export default function SettingsDrawer({
     keywordText,
     lastRefreshed,
     setActivityTypeSettings,
-    setActivityTypeColourSettings,
     setMinimumDistance,
     setMaximumDistance,
     setKeywordText,
@@ -114,16 +113,8 @@ export default function SettingsDrawer({
             <ColourPicker
               className={styles.colourPicker}
               value={activityTypeColourSettings[label as Label][theme]}
+              open={false}
               size="small"
-              disabledAlpha
-              disabledFormat
-              format="hex"
-              onChangeComplete={(colour) => {
-                setActivityTypeColourSettings({
-                  ...activityTypeColourSettings,
-                  [label]: colour.toHexString(),
-                });
-              }}
             />
           </div>
         ))}
