@@ -6,7 +6,8 @@ interface State {
   theme: Theme;
   athlete: Athlete | null;
   activities: Activity[];
-  selectedActivity: Activity | null;
+  hoveredActivityId: number | null;
+  selectedActivityId: number | null;
   activityTypeSettings: Record<Label, boolean>;
   activityTypeColourSettings: Record<Label, { [key in Theme]: string }>;
   minimumDistance: number;
@@ -18,7 +19,8 @@ interface State {
   setTheme: (theme: Theme) => void;
   setAthlete: (athlete: Athlete | null) => void;
   setActivities: (activities: Activity[]) => void;
-  setSelectedActivity: (activity: Activity | null) => void;
+  setHoveredActivityId: (activityId: number | null) => void;
+  setSelectedActivityId: (activityId: number | null) => void;
   setActivityTypeSettings: (
     activityTypeSettings: Record<Label, boolean>
   ) => void;
@@ -37,7 +39,8 @@ export const useStore = create<State>((set) => ({
   theme: "dark",
   athlete: null,
   activities: [],
-  selectedActivity: null,
+  hoveredActivityId: null,
+  selectedActivityId: null,
   activityTypeSettings: activityTypeConfig.reduce(
     (acc, config) => ({ ...acc, [config.label]: true }),
     {} as Record<Label, boolean>
@@ -55,7 +58,8 @@ export const useStore = create<State>((set) => ({
   setTheme: (theme) => set({ theme }),
   setAthlete: (athlete) => set({ athlete }),
   setActivities: (activities) => set({ activities }),
-  setSelectedActivity: (selectedActivity) => set({ selectedActivity }),
+  setHoveredActivityId: (hoveredActivityId) => set({ hoveredActivityId }),
+  setSelectedActivityId: (selectedActivityId) => set({ selectedActivityId }),
   setActivityTypeSettings: (activityTypeSettings) =>
     set({ activityTypeSettings }),
   setActivityTypeColourSettings: (activityTypeColourSettings) =>

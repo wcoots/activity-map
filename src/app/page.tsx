@@ -36,9 +36,14 @@ import styles from "./page.module.css";
 
 const ACTIVITY_SOURCE = "activity-source";
 const ACTIVITY_LAYER = "activity-layer";
+const HOVERED_ACTIVITY_LAYER = "hovered-activity-layer";
 const SELECTED_ACTIVITY_LAYER = "selected-activity-layer";
 
-const INTERACTIVE_LAYERS = [ACTIVITY_LAYER, SELECTED_ACTIVITY_LAYER];
+const INTERACTIVE_LAYERS = [
+  ACTIVITY_LAYER,
+  HOVERED_ACTIVITY_LAYER,
+  SELECTED_ACTIVITY_LAYER,
+];
 
 export default function Home() {
   const searchParams = useSearchParams();
@@ -49,7 +54,8 @@ export default function Home() {
   const {
     theme,
     activities,
-    selectedActivity,
+    hoveredActivityId,
+    selectedActivityId,
     activityTypeSettings,
     activityTypeColourSettings,
     minimumDistance,
@@ -59,7 +65,8 @@ export default function Home() {
     setTheme,
     setAthlete,
     setActivities,
-    setSelectedActivity,
+    setHoveredActivityId,
+    setSelectedActivityId,
     setMaximumDistance,
     setHighestDistance,
     setLastRefreshed,
@@ -86,11 +93,41 @@ export default function Home() {
       map.current.addLayer({
         id: ACTIVITY_LAYER,
         source: ACTIVITY_SOURCE,
-        filter: ["==", ["get", "selected"], false],
+        filter: [
+          "all",
+          ["==", ["get", "selected"], false],
+          ["==", ["get", "hovered"], false],
+        ],
         type: "line",
+        layout: {
+          "line-cap": "round",
+          "line-join": "round",
+        },
         paint: {
           "line-color": ["get", "colour"],
           "line-width": 3,
+          "line-blur": 2,
+        },
+      });
+    }
+
+    if (!map.current.getLayer(HOVERED_ACTIVITY_LAYER)) {
+      map.current.addLayer({
+        id: HOVERED_ACTIVITY_LAYER,
+        source: ACTIVITY_SOURCE,
+        filter: [
+          "all",
+          ["==", ["get", "selected"], false],
+          ["==", ["get", "hovered"], true],
+        ],
+        type: "line",
+        layout: {
+          "line-cap": "round",
+          "line-join": "round",
+        },
+        paint: {
+          "line-color": ["get", "colour"],
+          "line-width": 5,
           "line-blur": 2,
         },
       });
@@ -102,15 +139,19 @@ export default function Home() {
         source: ACTIVITY_SOURCE,
         filter: ["==", ["get", "selected"], true],
         type: "line",
+        layout: {
+          "line-cap": "round",
+          "line-join": "round",
+        },
         paint: {
           "line-color": ["get", "colour"],
-          "line-width": 4,
-          "line-border-color": themeConfig[theme].borderColour,
-          "line-border-width": 1,
+          "line-width": 7,
+          "line-border-color": ["get", "borderColour"],
+          "line-border-width": 2,
         },
       });
     }
-  }, [theme]);
+  }, []);
 
   const filterActivities = useCallback(
     (activities: Activity[]): Activity[] => {
@@ -138,8 +179,8 @@ export default function Home() {
         return typeSelected && distanceInRange && textMatch && yearMatch;
       });
 
-      if (!filteredActivities.find(({ id }) => id === selectedActivity?.id)) {
-        setSelectedActivity(null);
+      if (!filteredActivities.find(({ id }) => id === selectedActivityId)) {
+        setSelectedActivityId(null);
       }
 
       return filteredActivities;
@@ -150,8 +191,8 @@ export default function Home() {
       maximumDistance,
       keywordText,
       year,
-      selectedActivity,
-      setSelectedActivity,
+      selectedActivityId,
+      setSelectedActivityId,
     ]
   );
 
@@ -167,6 +208,7 @@ export default function Home() {
           if (!configItem) return acc;
 
           const colour = activityTypeColourSettings[configItem.label][theme];
+          const borderColour = themeConfig[theme].borderColour;
 
           if (!colour) return acc;
 
@@ -175,7 +217,9 @@ export default function Home() {
             properties: {
               id: activity.id,
               colour,
-              selected: activity.id === selectedActivity?.id,
+              borderColour,
+              hovered: activity.id === hoveredActivityId,
+              selected: activity.id === selectedActivityId,
             },
             geometry: {
               type: "LineString",
@@ -197,7 +241,8 @@ export default function Home() {
     activities,
     activityTypeColourSettings,
     filterActivities,
-    selectedActivity,
+    hoveredActivityId,
+    selectedActivityId,
   ]);
 
   function toggleTheme() {
@@ -231,7 +276,13 @@ export default function Home() {
   }
 
   function fitBoundsOfSelectedActivity() {
-    if (!map.current || !selectedActivity) return;
+    if (!map.current || !selectedActivityId) return;
+
+    const selectedActivity = activities.find(
+      (activity) => activity.id === selectedActivityId
+    );
+
+    if (!selectedActivity) return;
 
     const bounds = new LngLatBounds(
       [
@@ -278,17 +329,22 @@ export default function Home() {
 
       createMapLayers();
 
-      map.current.on("mouseenter", INTERACTIVE_LAYERS, () => {
+      map.current.on("mouseenter", INTERACTIVE_LAYERS, ({ features }) => {
         if (map.current) map.current.getCanvas().style.cursor = "pointer";
+        if (features?.length) {
+          const [topFeature] = features;
+          setHoveredActivityId(topFeature.properties!.id);
+        }
       });
 
       map.current.on("mouseleave", INTERACTIVE_LAYERS, () => {
         if (map.current) map.current.getCanvas().style.cursor = "";
+        setHoveredActivityId(null);
       });
 
       setMapLoading(false);
     });
-  }, [theme, setTheme, createMapLayers]);
+  }, [theme, setTheme, activities, setHoveredActivityId, createMapLayers]);
 
   useEffect(() => {
     // Authentication and activity fetching useEffect. Called once on component mount.
@@ -450,7 +506,7 @@ export default function Home() {
       });
 
       if (!features?.length) {
-        setSelectedActivity(null);
+        setSelectedActivityId(null);
         return;
       }
 
@@ -460,13 +516,13 @@ export default function Home() {
           (activity) => activity.id === topFeature.properties!.id
         );
 
-        if (activity) setSelectedActivity(activity);
+        if (activity) setSelectedActivityId(activity.id);
       }
     });
   }, [
     rawActivities,
     mapLoading,
-    setSelectedActivity,
+    setSelectedActivityId,
     setActivities,
     setHighestDistance,
     setMaximumDistance,

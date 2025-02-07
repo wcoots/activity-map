@@ -16,7 +16,11 @@ export default function SelectedActivityCard({
 }: {
   fitBoundsOfSelectedActivity(): void;
 }) {
-  const { selectedActivity } = useStore();
+  const { selectedActivityId, activities } = useStore();
+  if (!selectedActivityId) return null;
+  const selectedActivity = activities.find(
+    (activity) => activity.id === selectedActivityId
+  );
   if (!selectedActivity) return null;
 
   const header = (
