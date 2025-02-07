@@ -19,5 +19,5 @@ export function useTheme() {
     setTheme(toggle);
   }
 
-  return { theme, toggleTheme };
+  return { toggleTheme };
 }

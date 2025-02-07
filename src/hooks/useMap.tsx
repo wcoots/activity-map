@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Feature, FeatureCollection } from "geojson";
 import mapboxgl, {
   GeoJSONSource,
@@ -11,7 +11,7 @@ import mapboxgl, {
 import { activityTypeConfig, themeConfig } from "@/configs";
 import { useAuth } from "@/hooks/useAuth";
 import { useStore } from "@/store";
-import { decodePolyline, isMobile } from "@/utils";
+import { isMobile } from "@/utils";
 import { Activity } from "@/types";
 
 const ACTIVITY_SOURCE = "activity-source";
@@ -26,18 +26,13 @@ const INTERACTIVE_LAYERS = [
 ];
 
 export function useMap() {
-  const {
-    contextHolder,
-    isAuthenticated,
-    athleteLoading,
-    activitiesLoading,
-    rawActivities,
-  } = useAuth();
+  const { contextHolder } = useAuth();
 
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<Map | null>(null);
 
   const {
+    mapLoading,
     theme,
     activities,
     filteredActivityIds,
@@ -49,6 +44,8 @@ export function useMap() {
     maximumDistance,
     keywordText,
     year,
+    setMapLoading,
+    setSettingsOpen,
     setActivities,
     setFilteredActivityIds,
     setHoveredActivityId,
@@ -56,13 +53,6 @@ export function useMap() {
     setMaximumDistance,
     setHighestDistance,
   } = useStore();
-
-  // const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [mapLoading, setMapLoading] = useState(true);
-  // const [athleteLoading, setAthleteLoading] = useState(false);
-  // const [activitiesLoading, setActivitiesLoading] = useState(false);
-  // const [rawActivities, setRawActivities] = useState<RawActivity[]>([]);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const createMapLayers = useCallback(() => {
     if (!map.current) return;
@@ -328,25 +318,7 @@ export function useMap() {
 
   useEffect(() => {
     // Activities preparation useEffect. Called once on activities load.
-    if (!rawActivities.length || !map.current || mapLoading) return;
-
-    const activities = rawActivities
-      .filter((activity) => activity.map.summary_polyline.length)
-      .map((activity): Activity => {
-        return {
-          id: activity.id,
-          name: activity.name,
-          distance: activity.distance,
-          movingTime: activity.moving_time,
-          elapsedTime: activity.elapsed_time,
-          totalElevationGain: activity.total_elevation_gain,
-          averageSpeed: activity.average_speed,
-          type: activity.sport_type,
-          startDate: new Date(activity.start_date),
-          positions: decodePolyline(activity.map.summary_polyline),
-        };
-      })
-      .reverse();
+    if (!activities.length || !map.current || mapLoading) return;
 
     const longitudes = activities.flatMap((activity) =>
       activity.positions.map((pos) => pos.lng)
@@ -394,7 +366,7 @@ export function useMap() {
       }
     });
   }, [
-    rawActivities,
+    activities,
     mapLoading,
     setSelectedActivityId,
     setActivities,
@@ -423,12 +395,6 @@ export function useMap() {
   return {
     contextHolder,
     mapContainer,
-    mapLoading,
-    athleteLoading,
-    activitiesLoading,
-    isAuthenticated,
-    settingsOpen,
-    setSettingsOpen,
     fitBoundsOfSelectedActivity,
     fitBoundsOfActivities,
   };

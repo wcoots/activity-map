@@ -3,6 +3,11 @@ import { Athlete, Activity, Label, Theme } from "@/types";
 import { create } from "zustand";
 
 interface State {
+  isAuthenticated: boolean | null;
+  mapLoading: boolean;
+  athleteLoading: boolean;
+  activitiesLoading: boolean;
+  settingsOpen: boolean;
   theme: Theme;
   athlete: Athlete | null;
   activities: Activity[];
@@ -17,6 +22,11 @@ interface State {
   keywordText: string;
   year: number | null;
   lastRefreshed: Date | null;
+  setIsAuthenticated: (isAuthenticated: boolean | null) => void;
+  setMapLoading: (mapLoading: boolean) => void;
+  setAthleteLoading: (athleteLoading: boolean) => void;
+  setActivitiesLoading: (activitiesLoading: boolean) => void;
+  setSettingsOpen: (settingsOpen: boolean) => void;
   setTheme: (theme: Theme) => void;
   setAthlete: (athlete: Athlete | null) => void;
   setActivities: (activities: Activity[]) => void;
@@ -35,6 +45,11 @@ interface State {
 }
 
 export const useStore = create<State>((set) => ({
+  isAuthenticated: null,
+  mapLoading: true,
+  athleteLoading: false,
+  activitiesLoading: false,
+  settingsOpen: false,
   theme: "dark",
   athlete: null,
   activities: [],
@@ -55,6 +70,11 @@ export const useStore = create<State>((set) => ({
   keywordText: "",
   year: null,
   lastRefreshed: null,
+  setIsAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
+  setMapLoading: (mapLoading) => set({ mapLoading }),
+  setAthleteLoading: (athleteLoading) => set({ athleteLoading }),
+  setActivitiesLoading: (activitiesLoading) => set({ activitiesLoading }),
+  setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setTheme: (theme) => set({ theme }),
   setAthlete: (athlete) => set({ athlete }),
   setActivities: (activities) => set({ activities }),

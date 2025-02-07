@@ -15,21 +15,26 @@ import { useTheme } from "@/hooks/useTheme";
 
 import styles from "./page.module.css";
 import { useMap } from "@/hooks/useMap";
+import { useStore } from "@/store";
 
 export default function Home() {
-  const { theme, toggleTheme } = useTheme();
+  const { toggleTheme } = useTheme();
   const {
     contextHolder,
     mapContainer,
-    mapLoading,
-    athleteLoading,
-    activitiesLoading,
-    isAuthenticated,
-    settingsOpen,
-    setSettingsOpen,
     fitBoundsOfSelectedActivity,
     fitBoundsOfActivities,
   } = useMap();
+
+  const {
+    athleteLoading,
+    mapLoading,
+    settingsOpen,
+    activitiesLoading,
+    isAuthenticated,
+    theme,
+    setSettingsOpen,
+  } = useStore();
 
   return (
     <>

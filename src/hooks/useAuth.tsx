@@ -1,22 +1,31 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { message } from "antd";
 import dayjs from "dayjs";
 
 import { useStore } from "@/store";
-import { LocalStorageKey, Athlete, RawActivity, RawAthelete } from "@/types";
+import { decodePolyline } from "@/utils";
+import {
+  LocalStorageKey,
+  Athlete,
+  RawActivity,
+  RawAthelete,
+  Activity,
+} from "@/types";
 
 export function useAuth() {
   const searchParams = useSearchParams();
   const [messageApi, contextHolder] = message.useMessage();
 
-  const { setAthlete, setActivities, setLastRefreshed } = useStore();
-
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [athleteLoading, setAthleteLoading] = useState(false);
-  const [activitiesLoading, setActivitiesLoading] = useState(false);
-  const [rawActivities, setRawActivities] = useState<RawActivity[]>([]);
+  const {
+    setIsAuthenticated,
+    setAthleteLoading,
+    setActivitiesLoading,
+    setAthlete,
+    setActivities,
+    setLastRefreshed,
+  } = useStore();
 
   useEffect(() => {
     // Check authentication status and fetch athlete/activities if authenticated
@@ -91,7 +100,8 @@ export function useAuth() {
           const cacheAge = Date.now() - parseInt(ts, 10);
 
           if (cacheAge < 3600000) {
-            setRawActivities(data);
+            console.log(data);
+            setActivities(data);
             return;
           }
         }
@@ -100,12 +110,29 @@ export function useAuth() {
         if (!response.ok) return;
 
         const result: RawActivity[] = await response.json();
-        setRawActivities(result);
+        const activities = result
+          .filter((activity) => activity.map.summary_polyline.length)
+          .map((activity): Activity => {
+            return {
+              id: activity.id,
+              name: activity.name,
+              distance: activity.distance,
+              movingTime: activity.moving_time,
+              elapsedTime: activity.elapsed_time,
+              totalElevationGain: activity.total_elevation_gain,
+              averageSpeed: activity.average_speed,
+              type: activity.sport_type,
+              startDate: new Date(activity.start_date),
+              positions: decodePolyline(activity.map.summary_polyline),
+            };
+          })
+          .reverse();
+        setActivities(activities);
         setLastRefreshed(new Date());
 
         localStorage.setItem(
           LocalStorageKey.Activities,
-          JSON.stringify({ ts: Date.now().toString(), data: result })
+          JSON.stringify({ ts: Date.now().toString(), data: activities })
         );
       } catch (err) {
         console.error("Error fetching activities:", err);
@@ -125,11 +152,5 @@ export function useAuth() {
     }
   }, [searchParams, messageApi]);
 
-  return {
-    contextHolder,
-    isAuthenticated,
-    athleteLoading,
-    activitiesLoading,
-    rawActivities,
-  };
+  return { contextHolder };
 }
