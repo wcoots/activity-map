@@ -21,6 +21,7 @@ import { Button, Card, message, Spin, Switch, Tooltip } from "antd";
 
 import { SelectedActivityCard, SettingsDrawer } from "@/components";
 import { activityTypeConfig, themeConfig } from "@/configs";
+import { useTheme } from "@/hooks/useTheme";
 import { useStore } from "@/store";
 import { decodePolyline, isMobile } from "@/utils";
 import {
@@ -29,7 +30,6 @@ import {
   LocalStorageKey,
   RawActivity,
   RawAthelete,
-  Theme,
 } from "@/types";
 
 import styles from "./page.module.css";
@@ -51,8 +51,9 @@ export default function Home() {
   const map = useRef<Map | null>(null);
   const [messageApi, contextHolder] = message.useMessage();
 
+  const { theme, toggleTheme } = useTheme();
+
   const {
-    theme,
     activities,
     hoveredActivityId,
     selectedActivityId,
@@ -62,7 +63,6 @@ export default function Home() {
     maximumDistance,
     keywordText,
     year,
-    setTheme,
     setAthlete,
     setActivities,
     setHoveredActivityId,
@@ -245,12 +245,6 @@ export default function Home() {
     selectedActivityId,
   ]);
 
-  function toggleTheme() {
-    const { toggle } = themeConfig[theme];
-    localStorage.setItem(LocalStorageKey.Theme, toggle);
-    setTheme(toggle);
-  }
-
   function fitBoundsOfActivities() {
     if (!map.current) return;
 
@@ -303,10 +297,6 @@ export default function Home() {
   }
 
   useEffect(() => {
-    const localTheme = localStorage.getItem(LocalStorageKey.Theme);
-    if (localTheme && Object.keys(themeConfig).includes(localTheme))
-      setTheme(localTheme as Theme);
-
     // Map preparation useEffect. Called once on component mount.
     if (map.current || !mapContainer.current) return;
 
@@ -344,7 +334,7 @@ export default function Home() {
 
       setMapLoading(false);
     });
-  }, [theme, setTheme, activities, setHoveredActivityId, createMapLayers]);
+  }, [theme, activities, setHoveredActivityId, createMapLayers]);
 
   useEffect(() => {
     // Authentication and activity fetching useEffect. Called once on component mount.
