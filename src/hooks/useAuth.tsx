@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { message } from "antd";
 import dayjs from "dayjs";
+import { LngLatBounds } from "mapbox-gl";
 
 import { useAuthStore, useActivityStore } from "@/store";
 import { decodePolyline } from "@/utils";
@@ -89,13 +90,21 @@ export function useAuth() {
         );
 
         if (cachedActivities) {
-          const { ts, data } = JSON.parse(cachedActivities);
+          const { ts, data }: { ts: string; data: Activity[] } =
+            JSON.parse(cachedActivities);
           setLastRefreshed(dayjs(parseInt(ts, 10)).toDate());
 
           const cacheAge = Date.now() - parseInt(ts, 10);
 
           if (cacheAge < 3600000) {
-            console.log(data);
+            data.forEach((activity) => {
+              // parse bounds and startDate from JSON
+              activity.bounds = new LngLatBounds(
+                activity.bounds._sw,
+                activity.bounds._ne
+              );
+              activity.startDate = new Date(activity.startDate);
+            });
             setActivities(data);
             return;
           }
@@ -108,6 +117,14 @@ export function useAuth() {
         const activities = result
           .filter((activity) => activity.map.summary_polyline.length)
           .map((activity): Activity => {
+            const positions = decodePolyline(activity.map.summary_polyline);
+            const longitudes = positions.map((p) => p.lng);
+            const latitudes = positions.map((p) => p.lat);
+            const bounds = new LngLatBounds(
+              [Math.max(...longitudes), Math.max(...latitudes)],
+              [Math.min(...longitudes), Math.min(...latitudes)]
+            );
+
             return {
               id: activity.id,
               name: activity.name,
@@ -118,7 +135,8 @@ export function useAuth() {
               averageSpeed: activity.average_speed,
               type: activity.sport_type,
               startDate: new Date(activity.start_date),
-              positions: decodePolyline(activity.map.summary_polyline),
+              positions,
+              bounds,
             };
           })
           .reverse();
@@ -137,7 +155,14 @@ export function useAuth() {
     }
 
     checkAuth();
-  }, [setAthlete, setActivities, setLastRefreshed]);
+  }, [
+    setAthlete,
+    setActivities,
+    setLastRefreshed,
+    setActivitiesLoading,
+    setAthleteLoading,
+    setIsAuthenticated,
+  ]);
 
   useEffect(() => {
     // Show authentication error message if present in URL params

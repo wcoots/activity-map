@@ -1,4 +1,4 @@
-import { LngLat } from "mapbox-gl";
+import { LngLat, LngLatBounds } from "mapbox-gl";
 
 export enum LocalStorageKey {
   Athlete = "athlete",
@@ -99,6 +99,7 @@ export interface Activity {
   type: ActivityType;
   startDate: Date;
   positions: LngLat[];
+  bounds: LngLatBounds;
 }
 
 export type Label =

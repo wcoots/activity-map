@@ -109,6 +109,6 @@ export const activityTypeConfig: {
       ActivityType.Workout,
       ActivityType.Yoga,
     ],
-    colour: { dark: "#bbbbbb", light: "#888888" },
+    colour: { dark: "#dddddd", light: "#222222" },
   },
 ];

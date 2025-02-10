@@ -230,13 +230,15 @@ export function useMap() {
 
     if (!filteredActivities.length) return;
 
-    const longitudes = filteredActivities.flatMap((activity) =>
-      activity.positions.map((pos) => pos.lng)
-    );
+    const longitudes = filteredActivities.flatMap((activity) => [
+      activity.bounds.getNorthEast().lng,
+      activity.bounds.getSouthWest().lng,
+    ]);
 
-    const latitudes = filteredActivities.flatMap((activity) =>
-      activity.positions.map((pos) => pos.lat)
-    );
+    const latitudes = filteredActivities.flatMap((activity) => [
+      activity.bounds.getNorthEast().lat,
+      activity.bounds.getSouthWest().lat,
+    ]);
 
     const bounds = new LngLatBounds(
       [Math.max(...longitudes), Math.max(...latitudes)],
@@ -256,22 +258,11 @@ export function useMap() {
 
     if (!selectedActivity) return;
 
-    const bounds = new LngLatBounds(
-      [
-        Math.max(...selectedActivity.positions.map((pos) => pos.lng)),
-        Math.max(...selectedActivity.positions.map((pos) => pos.lat)),
-      ],
-      [
-        Math.min(...selectedActivity.positions.map((pos) => pos.lng)),
-        Math.min(...selectedActivity.positions.map((pos) => pos.lat)),
-      ]
-    );
-
     const padding: PaddingOptions = isMobile()
       ? { top: 50, right: 50, bottom: 300, left: 50 }
       : { top: 100, right: 100, bottom: 250, left: 250 };
 
-    map.current.fitBounds(bounds, { padding });
+    map.current.fitBounds(selectedActivity.bounds, { padding });
   }
 
   useEffect(() => {
@@ -318,22 +309,7 @@ export function useMap() {
     // Activities preparation useEffect. Called once on activities load.
     if (!activities.length || !map.current || mapLoading) return;
 
-    const longitudes = activities.flatMap((activity) =>
-      activity.positions.map((pos) => pos.lng)
-    );
-
-    const latitudes = activities.flatMap((activity) =>
-      activity.positions.map((pos) => pos.lat)
-    );
-
-    const bounds = new LngLatBounds(
-      [Math.max(...longitudes), Math.max(...latitudes)],
-      [Math.min(...longitudes), Math.min(...latitudes)]
-    );
-
-    map.current.fitBounds(bounds, { padding: 20 });
-
-    setActivities(activities);
+    fitBoundsOfActivities();
 
     const maxDistance = Math.ceil(
       Math.max(...activities.map((activity) => activity.distance / 1000))
@@ -363,6 +339,7 @@ export function useMap() {
         if (activity) setSelectedActivityId(activity.id);
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     activities,
     mapLoading,
