@@ -1,3 +1,8 @@
 {
-  "regions": ["lhr1"]
+  "regions": ["lhr1"],
+  "functions": {
+    "api/geocoding.ts": {
+      "runtime": "edge"
+    }
+  }
 }

@@ -34,7 +34,7 @@ function generateCacheKey(latitude: number, longitude: number): string {
   return `${latitude},${longitude}`;
 }
 
-export const POST = async (request: NextRequest) => {
+export async function POST(request: NextRequest) {
   try {
     const baseUrl = `https://api.mapbox.com/search/geocode/v6/batch?access_token=${MAPBOX_API_KEY}`;
     const activities: Activity[] = await request.json();
@@ -126,4 +126,4 @@ export const POST = async (request: NextRequest) => {
       { status: 500 }
     );
   }
-};
+}
