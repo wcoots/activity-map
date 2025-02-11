@@ -8,7 +8,7 @@ interface MapboxResponse {
     features: {
       type: "Feature";
       properties: {
-        feature_type: "place" | "country";
+        feature_type: "country" | "region" | "district";
         name: string;
         full_address: string;
       };
@@ -58,7 +58,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .filter((activity): activity is Activity => activity !== null)
       .map(({ id, positions }) => {
         const [{ lat: latitude, lng: longitude }] = positions;
-        return { id, types: ["country", "place"], latitude, longitude };
+        return {
+          id,
+          types: ["country", "region", "district"],
+          latitude,
+          longitude,
+        };
       });
 
     async function fetchGeolocationData() {
@@ -89,12 +94,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const countryFeature = location.features.find(
           (feature) => feature.properties.feature_type === "country"
         );
-        const placeFeature = location.features.find(
-          (feature) => feature.properties.feature_type === "place"
+        const districtFeature = location.features.find(
+          (feature) => feature.properties.feature_type === "district"
+        );
+        const regionFeature = location.features.find(
+          (feature) => feature.properties.feature_type === "region"
         );
 
         const country = countryFeature?.properties.name ?? null;
-        const rawAddress = placeFeature?.properties.full_address ?? null;
+        const rawAddress =
+          districtFeature?.properties.full_address ??
+          regionFeature?.properties.full_address ??
+          null;
         const address = removeDuplicateLocations(rawAddress);
 
         if (!country || !address) return;
@@ -102,8 +113,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const { latitude, longitude } = geolocationQueries[index];
         const cacheKey = generateCacheKey(latitude, longitude);
         const geocode: Geocode = { country, address };
-        await redis.set(cacheKey, JSON.stringify(geocode));
         geocodedActivities[geolocationQueries[index].id] = geocode;
+        await redis.set(cacheKey, JSON.stringify(geocode));
       }
     });
 

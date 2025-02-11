@@ -256,7 +256,7 @@ export function useMap() {
     );
 
     setSettingsOpen(false);
-    map.current.fitBounds(bounds, { padding: 20 });
+    map.current.fitBounds(bounds, { padding: 50 });
   }
 
   function fitBoundsOfSelectedActivity() {
