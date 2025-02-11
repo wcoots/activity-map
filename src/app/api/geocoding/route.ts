@@ -17,7 +17,7 @@ interface MapboxResponse {
   }[];
 }
 
-export const config = { runtime: "edge" };
+export const runtime = "edge";
 
 const MAPBOX_API_KEY = process.env.MAPBOX_API_KEY!;
 
