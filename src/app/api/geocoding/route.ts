@@ -1,6 +1,7 @@
 import { Activity, GeocodedActivities, Geocode } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "redis";
+import { Redis } from "@upstash/redis";
+
 import { isNextResponse, unique } from "../utils";
 
 interface MapboxResponse {
@@ -16,10 +17,11 @@ interface MapboxResponse {
   }[];
 }
 
-const MAPBOX_API_KEY = process.env.MAPBOX_API_KEY!;
-const REDIS_URL = process.env.REDIS_URL!;
+export const config = { runtime: "edge" };
 
-const redis = await createClient({ url: REDIS_URL }).connect();
+const MAPBOX_API_KEY = process.env.MAPBOX_API_KEY!;
+
+const redis = Redis.fromEnv();
 
 function removeDuplicateLocations(address: string | null): string | null {
   if (!address) return address;
@@ -32,21 +34,20 @@ function generateCacheKey(latitude: number, longitude: number): string {
   return `${latitude},${longitude}`;
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export const POST = async (request: NextRequest) => {
   try {
     const baseUrl = `https://api.mapbox.com/search/geocode/v6/batch?access_token=${MAPBOX_API_KEY}`;
     const activities: Activity[] = await request.json();
-
     const geocodedActivities: GeocodedActivities = {};
 
     const uncachedActivities = await Promise.all(
       activities.map(async (activity) => {
         const [{ lat: latitude, lng: longitude }] = activity.positions;
         const cacheKey = generateCacheKey(latitude, longitude);
-        const cachedValue = await redis.get(cacheKey);
+        const cachedValue = await redis.get<Geocode>(cacheKey);
+
         if (cachedValue) {
-          const parsedValue = JSON.parse(cachedValue) as Geocode;
-          geocodedActivities[activity.id] = parsedValue;
+          geocodedActivities[activity.id] = cachedValue;
           return null;
         } else {
           return activity;
@@ -125,4 +126,4 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
-}
+};

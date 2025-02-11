@@ -5,7 +5,10 @@ const nextConfig = {
     STRAVA_CLIENT_ID: process.env.STRAVA_CLIENT_ID,
     STRAVA_CLIENT_SECRET: process.env.STRAVA_CLIENT_SECRET,
     GITHUB_URL: process.env.GITHUB_URL,
-    REDIS_URL: process.env.REDIS_URL,
+    KV_URL: process.env.KV_URL,
+    KV_REST_API_READ_ONLY_TOKEN: process.env.KV_REST_API_READ_ONLY_TOKEN,
+    KV_REST_API_TOKEN: process.env.KV_REST_API_TOKEN,
+    KV_REST_API_URL: process.env.KV_REST_API_URL,
   },
 };
 
