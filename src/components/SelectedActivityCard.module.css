@@ -19,7 +19,13 @@
   justify-content: space-between;
 }
 
-.date {
+.subtitle {
   font-size: 0.7em;
   color: #666;
+}
+
+.subtitleMobile {
+  width: calc(100svw - 100px);
+  white-space: normal;
+  word-break: break-word;
 }

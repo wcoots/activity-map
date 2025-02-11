@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import dayjs from "dayjs";
 import classNames from "classnames";
 
@@ -33,8 +34,16 @@ export default function SelectedActivityCard({
     <div className={styles.header}>
       <div>
         {selectedActivity.name}
-        {location && <div className={styles.date}>{location}</div>}
-        <div className={styles.date}>{date}</div>
+        {location && (
+          <div
+            className={classNames(styles.subtitle, {
+              [styles.subtitleMobile]: isMobile(),
+            })}
+          >
+            {location}
+          </div>
+        )}
+        <div className={styles.subtitle}>{date}</div>
       </div>
       <Button
         type="primary"
