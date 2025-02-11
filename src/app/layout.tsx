@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "antd/dist/reset.css"; // Base Ant Design styles
 import "./globals.css";
 
@@ -32,6 +34,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <Wrapper>{children}</Wrapper>
+        <Analytics />
+        <SpeedInsights />
       </body>
       {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
     </html>
