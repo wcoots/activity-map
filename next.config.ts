@@ -5,6 +5,7 @@ const nextConfig = {
     STRAVA_CLIENT_ID: process.env.STRAVA_CLIENT_ID,
     STRAVA_CLIENT_SECRET: process.env.STRAVA_CLIENT_SECRET,
     GITHUB_URL: process.env.GITHUB_URL,
+    REDIS_URL: process.env.REDIS_URL,
   },
 };
 
