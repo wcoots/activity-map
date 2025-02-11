@@ -26,13 +26,15 @@ export default function SelectedActivityCard({
 
   if (!selectedActivity) return null;
 
+  const date = dayjs(selectedActivity.startDate).format("dddd D MMMM YYYY");
+  const location = selectedActivity.location?.address;
+
   const header = (
     <div className={styles.header}>
       <div>
         {selectedActivity.name}
-        <div className={styles.date}>
-          {dayjs(selectedActivity.startDate).format("ddd D MMM YYYY")}
-        </div>
+        {location && <div className={styles.date}>{location}</div>}
+        <div className={styles.date}>{date}</div>
       </div>
       <Button
         type="primary"

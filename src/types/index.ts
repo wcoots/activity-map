@@ -100,6 +100,16 @@ export interface Activity {
   startDate: Date;
   positions: LngLat[];
   bounds: LngLatBounds;
+  location: Geocode | null;
+}
+
+export interface Geocode {
+  country: string;
+  address: string;
+}
+
+export interface GeocodedActivities {
+  [activityId: number]: Geocode | null;
 }
 
 export type Label =
@@ -109,3 +119,13 @@ export type Label =
   | "Snowsports"
   | "Watersports"
   | "Other";
+
+export enum LoadingText {
+  STRAVA = "Getting activities from Strava...",
+  GEOCODING = "Geocoding activities...",
+}
+
+export interface CountryCount {
+  name: string;
+  count: number;
+}

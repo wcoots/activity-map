@@ -11,6 +11,7 @@ import {
   Divider,
   Drawer,
   Input,
+  Select,
   Slider,
 } from "antd";
 
@@ -35,11 +36,13 @@ export default function SettingsDrawer({
     highestDistance,
     keywordText,
     lastRefreshed,
+    countries,
     setActivityTypeSettings,
     setMinimumDistance,
     setMaximumDistance,
     setKeywordText,
     setYear,
+    setSelectedCountry,
   } = useActivityStore();
 
   const { theme } = useMapStore();
@@ -140,6 +143,21 @@ export default function SettingsDrawer({
           setMinimumDistance(min);
           setMaximumDistance(max);
         }}
+      />
+
+      <Divider />
+
+      <h3>Country</h3>
+      <Select
+        mode="multiple"
+        maxCount={1}
+        style={{ width: "100%" }}
+        onChange={([val]) => setSelectedCountry(val ?? null)}
+        placeholder="Please select"
+        options={countries.map((country) => ({
+          label: `${country.name} (${country.count})`,
+          value: country.name,
+        }))}
       />
 
       <Divider />

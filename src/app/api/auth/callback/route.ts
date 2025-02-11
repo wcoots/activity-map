@@ -56,8 +56,7 @@ export async function GET(request: NextRequest) {
     });
 
     return res;
-  } catch (e) {
-    console.log(e);
+  } catch {
     return NextResponse.json({ error: "OAuth flow failed" }, { status: 500 });
   }
 }

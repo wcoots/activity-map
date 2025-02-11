@@ -36,3 +36,14 @@ export function decodePolyline(encoded: string): LngLat[] {
 export function isMobile(): boolean {
   return window.innerWidth < 768;
 }
+
+export function unique<T>(array: T[]): T[] {
+  const seen = new Set<T>();
+  return array.filter((item) => {
+    if (seen.has(item)) {
+      return false;
+    }
+    seen.add(item);
+    return true;
+  });
+}

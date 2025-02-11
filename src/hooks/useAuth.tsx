@@ -5,7 +5,7 @@ import { message } from "antd";
 import dayjs from "dayjs";
 import { LngLatBounds } from "mapbox-gl";
 
-import { useAuthStore, useActivityStore } from "@/store";
+import { useAuthStore, useActivityStore, useUIStore } from "@/store";
 import { decodePolyline } from "@/utils";
 import {
   LocalStorageKey,
@@ -13,6 +13,9 @@ import {
   RawActivity,
   RawAthelete,
   Activity,
+  GeocodedActivities,
+  LoadingText,
+  CountryCount,
 } from "@/types";
 
 export function useAuth() {
@@ -20,8 +23,31 @@ export function useAuth() {
   const [messageApi, contextHolder] = message.useMessage();
 
   const { setIsAuthenticated, setAthleteLoading, setAthlete } = useAuthStore();
-  const { setActivitiesLoading, setActivities, setLastRefreshed } =
-    useActivityStore();
+  const {
+    setActivitiesLoading,
+    setActivities,
+    setFilteredActivityIds,
+    setLastRefreshed,
+    setCountries,
+  } = useActivityStore();
+  const { setLoadingText } = useUIStore();
+
+  function extractCountries(activities: Activity[]): CountryCount[] {
+    const countries: CountryCount[] = [];
+
+    activities.forEach((activity) => {
+      if (!activity.location) return;
+
+      const country = countries.find((country) => {
+        return country.name === activity.location?.country;
+      });
+
+      if (country) country.count += 1;
+      else countries.push({ name: activity.location.country, count: 1 });
+    });
+
+    return countries;
+  }
 
   useEffect(() => {
     // Check authentication status and fetch athlete/activities if authenticated
@@ -35,8 +61,7 @@ export function useAuth() {
         } else {
           setIsAuthenticated(false);
         }
-      } catch (error) {
-        console.error("Error checking authentication:", error);
+      } catch {
         setIsAuthenticated(false);
       }
     }
@@ -84,63 +109,88 @@ export function useAuth() {
 
     async function fetchActivities() {
       try {
-        setActivitiesLoading(true);
         const cachedActivities = localStorage.getItem(
           LocalStorageKey.Activities
         );
 
         if (cachedActivities) {
-          const { ts, data }: { ts: string; data: Activity[] } =
+          const { ts, data: activities }: { ts: string; data: Activity[] } =
             JSON.parse(cachedActivities);
           setLastRefreshed(dayjs(parseInt(ts, 10)).toDate());
 
           const cacheAge = Date.now() - parseInt(ts, 10);
 
           if (cacheAge < 3600000) {
-            data.forEach((activity) => {
+            activities.forEach((activity) => {
+              const { bounds, startDate } = activity;
               // parse bounds and startDate from JSON
-              activity.bounds = new LngLatBounds(
-                activity.bounds._sw,
-                activity.bounds._ne
-              );
-              activity.startDate = new Date(activity.startDate);
+              activity.bounds = new LngLatBounds(bounds._sw, bounds._ne);
+              activity.startDate = new Date(startDate);
             });
-            setActivities(data);
+
+            setActivities(activities);
+            setFilteredActivityIds(activities.map((activity) => activity.id));
+            setCountries(extractCountries(activities));
             return;
           }
         }
 
-        const response = await fetch("/api/activities");
-        if (!response.ok) return;
+        setActivitiesLoading(true);
+        setLoadingText(LoadingText.STRAVA);
 
-        const result: RawActivity[] = await response.json();
-        const activities = result
-          .filter((activity) => activity.map.summary_polyline.length)
-          .map((activity): Activity => {
-            const positions = decodePolyline(activity.map.summary_polyline);
-            const longitudes = positions.map((p) => p.lng);
-            const latitudes = positions.map((p) => p.lat);
-            const bounds = new LngLatBounds(
-              [Math.max(...longitudes), Math.max(...latitudes)],
-              [Math.min(...longitudes), Math.min(...latitudes)]
-            );
+        const activitiesResponse = await fetch("/api/activities");
+        if (!activitiesResponse.ok) return;
 
-            return {
-              id: activity.id,
-              name: activity.name,
-              distance: activity.distance,
-              movingTime: activity.moving_time,
-              elapsedTime: activity.elapsed_time,
-              totalElevationGain: activity.total_elevation_gain,
-              averageSpeed: activity.average_speed,
-              type: activity.sport_type,
-              startDate: new Date(activity.start_date),
-              positions,
-              bounds,
-            };
-          })
-          .reverse();
+        const rawActivities: RawActivity[] = await activitiesResponse.json();
+        const activities = await Promise.all(
+          rawActivities
+            .filter((activity) => activity.map.summary_polyline.length)
+            .map(async (activity): Promise<Activity> => {
+              const positions = decodePolyline(activity.map.summary_polyline);
+              const longitudes = positions.map((p) => p.lng);
+              const latitudes = positions.map((p) => p.lat);
+              const bounds = new LngLatBounds(
+                [Math.max(...longitudes), Math.max(...latitudes)],
+                [Math.min(...longitudes), Math.min(...latitudes)]
+              );
+
+              return {
+                id: activity.id,
+                name: activity.name,
+                distance: activity.distance,
+                movingTime: activity.moving_time,
+                elapsedTime: activity.elapsed_time,
+                totalElevationGain: activity.total_elevation_gain,
+                averageSpeed: activity.average_speed,
+                type: activity.sport_type,
+                startDate: new Date(activity.start_date),
+                positions,
+                bounds,
+                location: null,
+              };
+            })
+            .reverse()
+        );
+
+        setLoadingText(LoadingText.GEOCODING);
+
+        const geocodingResponse = await fetch("/api/geocoding", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(activities),
+        });
+
+        const geocodingResult: GeocodedActivities =
+          await geocodingResponse.json();
+
+        activities.forEach((activity) => {
+          const geocoded = geocodingResult[activity.id];
+          activity.location = geocoded;
+        });
+
         setActivities(activities);
+        setFilteredActivityIds(activities.map((a) => a.id));
+        setCountries(extractCountries(activities));
         setLastRefreshed(new Date());
 
         localStorage.setItem(
@@ -158,10 +208,13 @@ export function useAuth() {
   }, [
     setAthlete,
     setActivities,
+    setFilteredActivityIds,
+    setCountries,
     setLastRefreshed,
     setActivitiesLoading,
     setAthleteLoading,
     setIsAuthenticated,
+    setLoadingText,
   ]);
 
   useEffect(() => {

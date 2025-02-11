@@ -41,7 +41,7 @@ export function useMap() {
     maximumDistance,
     keywordText,
     year,
-    setActivities,
+    selectedCountry,
     setFilteredActivityIds,
     setHoveredActivityId,
     setSelectedActivityId,
@@ -149,8 +149,17 @@ export function useMap() {
         const yearMatch = year
           ? activity.startDate.getFullYear() === year
           : true;
+        const countryMatch = selectedCountry
+          ? activity.location?.country === selectedCountry
+          : true;
 
-        return typeSelected && distanceInRange && textMatch && yearMatch;
+        return (
+          typeSelected &&
+          distanceInRange &&
+          textMatch &&
+          yearMatch &&
+          countryMatch
+        );
       });
 
       if (!filteredActivities.find(({ id }) => id === selectedActivityId)) {
@@ -167,6 +176,7 @@ export function useMap() {
       maximumDistance,
       keywordText,
       year,
+      selectedCountry,
       selectedActivityId,
       setSelectedActivityId,
       setFilteredActivityIds,
@@ -344,7 +354,6 @@ export function useMap() {
     activities,
     mapLoading,
     setSelectedActivityId,
-    setActivities,
     setHighestDistance,
     setMaximumDistance,
   ]);

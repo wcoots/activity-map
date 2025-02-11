@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Activity, Label } from "@/types";
+import { Activity, Label, CountryCount } from "@/types";
 import { activityTypeConfig } from "@/configs";
 
 interface ActivityState {
@@ -15,6 +15,8 @@ interface ActivityState {
   keywordText: string;
   year: number | null;
   lastRefreshed: Date | null;
+  countries: CountryCount[];
+  selectedCountry: string | null;
   setActivitiesLoading: (loading: boolean) => void;
   setActivities: (activities: Activity[]) => void;
   setFilteredActivityIds: (activityIds: number[]) => void;
@@ -29,6 +31,8 @@ interface ActivityState {
   setKeywordText: (text: string) => void;
   setYear: (year: number | null) => void;
   setLastRefreshed: (date: Date) => void;
+  setCountries: (countries: CountryCount[]) => void;
+  setSelectedCountry: (country: string | null) => void;
 }
 
 export const useActivityStore = create<ActivityState>((set) => ({
@@ -47,6 +51,8 @@ export const useActivityStore = create<ActivityState>((set) => ({
   keywordText: "",
   year: null,
   lastRefreshed: null,
+  countries: [],
+  selectedCountry: null,
   setActivitiesLoading: (loading) => set({ activitiesLoading: loading }),
   setActivities: (activities) => set({ activities }),
   setFilteredActivityIds: (activityIds) =>
@@ -61,4 +67,6 @@ export const useActivityStore = create<ActivityState>((set) => ({
   setKeywordText: (text) => set({ keywordText: text }),
   setYear: (year) => set({ year }),
   setLastRefreshed: (date) => set({ lastRefreshed: date }),
+  setCountries: (countries) => set({ countries }),
+  setSelectedCountry: (country) => set({ selectedCountry: country }),
 }));
