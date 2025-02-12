@@ -16,11 +16,13 @@ import { Activity } from "@/types";
 
 const ACTIVITY_SOURCE = "activity-source";
 const ACTIVITY_LAYER = "activity-layer";
+const INTERACTIVE_ACTIVITY_LAYER = "interactive-activity-layer";
 const HOVERED_ACTIVITY_LAYER = "hovered-activity-layer";
 const SELECTED_ACTIVITY_LAYER = "selected-activity-layer";
 
 const INTERACTIVE_LAYERS = [
   ACTIVITY_LAYER,
+  INTERACTIVE_ACTIVITY_LAYER,
   HOVERED_ACTIVITY_LAYER,
   SELECTED_ACTIVITY_LAYER,
 ];
@@ -32,6 +34,7 @@ export function useMap() {
   const map = useRef<Map | null>(null);
 
   const {
+    activitiesLoading,
     activities,
     filteredActivityIds,
     hoveredActivityId,
@@ -58,6 +61,23 @@ export function useMap() {
       map.current!.addSource(ACTIVITY_SOURCE, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
+      });
+    }
+
+    if (!map.current.getLayer(INTERACTIVE_ACTIVITY_LAYER)) {
+      map.current.addLayer({
+        id: INTERACTIVE_ACTIVITY_LAYER,
+        source: ACTIVITY_SOURCE,
+        filter: ["==", ["get", "selected"], false],
+        type: "line",
+        layout: {
+          "line-cap": "round",
+          "line-join": "round",
+        },
+        paint: {
+          "line-color": "transparent",
+          "line-width": 12,
+        },
       });
     }
 
@@ -313,10 +333,13 @@ export function useMap() {
   }, [theme, activities, setHoveredActivityId, createMapLayers, setMapLoading]);
 
   useEffect(() => {
-    // Activities preparation useEffect. Called once on activities load.
-    if (!activities.length || !map.current || mapLoading) return;
+    if (!activitiesLoading) fitBoundsOfActivities();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activitiesLoading]);
 
-    fitBoundsOfActivities();
+  useEffect(() => {
+    // Activities preparation useEffect. Called on activities load.
+    if (!activities.length || !map.current || mapLoading) return;
 
     const maxDistance = Math.ceil(
       Math.max(...activities.map((activity) => activity.distance / 1000))
@@ -346,7 +369,6 @@ export function useMap() {
         if (activity) setSelectedActivityId(activity.id);
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     activities,
     mapLoading,

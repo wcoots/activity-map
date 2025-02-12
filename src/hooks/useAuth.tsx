@@ -52,6 +52,10 @@ export function useAuth() {
     // Check authentication status and fetch athlete/activities if authenticated
     async function checkAuth() {
       try {
+        setAthleteLoading(true);
+        setActivitiesLoading(true);
+        setCountriesLoading(true);
+
         const response = await fetch("/api/auth/check");
 
         if (response.status === 200) {
@@ -67,7 +71,6 @@ export function useAuth() {
 
     async function fetchAthlete() {
       try {
-        setAthleteLoading(true);
         const cachedAthlete = localStorage.getItem(LocalStorageKey.Athlete);
 
         if (cachedAthlete) {
@@ -130,12 +133,10 @@ export function useAuth() {
             setActivities(activities);
             setFilteredActivityIds(activities.map((activity) => activity.id));
             setCountries(extractCountries(activities));
+            setCountriesLoading(false);
             return;
           }
         }
-
-        setActivitiesLoading(true);
-        setCountriesLoading(true);
 
         const response = await fetch("/api/activities");
         if (!response.ok) return;

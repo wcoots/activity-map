@@ -12,6 +12,7 @@ import { Button, Card, Spin, Switch, Tooltip } from "antd";
 import { SelectedActivityCard, SettingsDrawer } from "@/components";
 import { themeConfig } from "@/configs";
 import { useMap, useTheme } from "@/hooks";
+import { isMobile } from "@/utils";
 import {
   useActivityStore,
   useAuthStore,
@@ -76,7 +77,9 @@ export default function Home() {
         <>
           <Tooltip
             placement="right"
-            title={`toggle to ${themeConfig[theme].toggle} theme`}
+            title={
+              isMobile() ? null : `toggle to ${themeConfig[theme].toggle} theme`
+            }
             arrow={false}
           >
             <Switch
@@ -88,7 +91,11 @@ export default function Home() {
             />
           </Tooltip>
 
-          <Tooltip placement="left" title="settings" arrow={false}>
+          <Tooltip
+            placement="left"
+            title={isMobile() ? null : "settings"}
+            arrow={false}
+          >
             <Button
               className={styles.settingsButton}
               type="primary"
