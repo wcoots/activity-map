@@ -4,6 +4,7 @@ import { activityTypeConfig } from "@/configs";
 
 interface ActivityState {
   activitiesLoading: boolean;
+  countriesLoading: boolean;
   activities: Activity[];
   filteredActivityIds: number[];
   hoveredActivityId: number | null;
@@ -18,6 +19,7 @@ interface ActivityState {
   countries: CountryCount[];
   selectedCountry: string | null;
   setActivitiesLoading: (loading: boolean) => void;
+  setCountriesLoading: (loading: boolean) => void;
   setActivities: (activities: Activity[]) => void;
   setFilteredActivityIds: (activityIds: number[]) => void;
   setHoveredActivityId: (id: number | null) => void;
@@ -37,6 +39,7 @@ interface ActivityState {
 
 export const useActivityStore = create<ActivityState>((set) => ({
   activitiesLoading: false,
+  countriesLoading: false,
   activities: [],
   filteredActivityIds: [],
   hoveredActivityId: null,
@@ -54,6 +57,7 @@ export const useActivityStore = create<ActivityState>((set) => ({
   countries: [],
   selectedCountry: null,
   setActivitiesLoading: (loading) => set({ activitiesLoading: loading }),
+  setCountriesLoading: (loading) => set({ countriesLoading: loading }),
   setActivities: (activities) => set({ activities }),
   setFilteredActivityIds: (activityIds) =>
     set({ filteredActivityIds: activityIds }),

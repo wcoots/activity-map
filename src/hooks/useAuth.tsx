@@ -5,7 +5,7 @@ import { message } from "antd";
 import dayjs from "dayjs";
 import { LngLatBounds } from "mapbox-gl";
 
-import { useAuthStore, useActivityStore, useUIStore } from "@/store";
+import { useAuthStore, useActivityStore } from "@/store";
 import { decodePolyline } from "@/utils";
 import {
   LocalStorageKey,
@@ -14,7 +14,6 @@ import {
   RawAthelete,
   Activity,
   GeocodedActivities,
-  LoadingText,
   CountryCount,
 } from "@/types";
 
@@ -25,12 +24,12 @@ export function useAuth() {
   const { setIsAuthenticated, setAthleteLoading, setAthlete } = useAuthStore();
   const {
     setActivitiesLoading,
+    setCountriesLoading,
     setActivities,
     setFilteredActivityIds,
     setLastRefreshed,
     setCountries,
   } = useActivityStore();
-  const { setLoadingText } = useUIStore();
 
   function extractCountries(activities: Activity[]): CountryCount[] {
     const countries: CountryCount[] = [];
@@ -136,57 +135,39 @@ export function useAuth() {
         }
 
         setActivitiesLoading(true);
-        setLoadingText(LoadingText.STRAVA);
+        setCountriesLoading(true);
 
-        const activitiesResponse = await fetch("/api/activities");
-        if (!activitiesResponse.ok) return;
+        const response = await fetch("/api/activities");
+        if (!response.ok) return;
 
-        const rawActivities: RawActivity[] = await activitiesResponse.json();
-        const activities = await Promise.all(
-          rawActivities
-            .filter((activity) => activity.map.summary_polyline.length)
-            .map(async (activity): Promise<Activity> => {
-              const positions = decodePolyline(activity.map.summary_polyline);
-              const longitudes = positions.map((p) => p.lng);
-              const latitudes = positions.map((p) => p.lat);
-              const bounds = new LngLatBounds(
-                [Math.max(...longitudes), Math.max(...latitudes)],
-                [Math.min(...longitudes), Math.min(...latitudes)]
-              );
+        const result: RawActivity[] = await response.json();
+        const activities = result
+          .filter((activity) => activity.map.summary_polyline.length)
+          .map((activity): Activity => {
+            const positions = decodePolyline(activity.map.summary_polyline);
+            const longitudes = positions.map((p) => p.lng);
+            const latitudes = positions.map((p) => p.lat);
+            const bounds = new LngLatBounds(
+              [Math.max(...longitudes), Math.max(...latitudes)],
+              [Math.min(...longitudes), Math.min(...latitudes)]
+            );
 
-              return {
-                id: activity.id,
-                name: activity.name,
-                distance: activity.distance,
-                movingTime: activity.moving_time,
-                elapsedTime: activity.elapsed_time,
-                totalElevationGain: activity.total_elevation_gain,
-                averageSpeed: activity.average_speed,
-                type: activity.sport_type,
-                startDate: new Date(activity.start_date),
-                positions,
-                bounds,
-                location: null,
-              };
-            })
-            .reverse()
-        );
-
-        setLoadingText(LoadingText.GEOCODING);
-
-        const geocodingResponse = await fetch("/api/geocoding", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(activities),
-        });
-
-        const geocodingResult: GeocodedActivities =
-          await geocodingResponse.json();
-
-        activities.forEach((activity) => {
-          const geocoded = geocodingResult[activity.id];
-          activity.location = geocoded;
-        });
+            return {
+              id: activity.id,
+              name: activity.name,
+              distance: activity.distance,
+              movingTime: activity.moving_time,
+              elapsedTime: activity.elapsed_time,
+              totalElevationGain: activity.total_elevation_gain,
+              averageSpeed: activity.average_speed,
+              type: activity.sport_type,
+              startDate: new Date(activity.start_date),
+              positions,
+              bounds,
+              location: null,
+            };
+          })
+          .reverse();
 
         setActivities(activities);
         setFilteredActivityIds(activities.map((a) => a.id));
@@ -197,10 +178,42 @@ export function useAuth() {
           LocalStorageKey.Activities,
           JSON.stringify({ ts: Date.now().toString(), data: activities })
         );
+
+        geocodeActivities(activities);
       } catch (err) {
         console.error("Error fetching activities:", err);
       } finally {
         setActivitiesLoading(false);
+      }
+    }
+
+    async function geocodeActivities(activities: Activity[]) {
+      try {
+        const response = await fetch("/api/geocoding", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(activities),
+        });
+        if (!response.ok) return;
+
+        const result: GeocodedActivities = await response.json();
+
+        const updatedActivities = activities.map((activity) => ({
+          ...activity,
+          location: result[activity.id] ?? null,
+        }));
+
+        setActivities(updatedActivities);
+        setCountries(extractCountries(updatedActivities));
+
+        localStorage.setItem(
+          LocalStorageKey.Activities,
+          JSON.stringify({ ts: Date.now().toString(), data: updatedActivities })
+        );
+      } catch (err) {
+        console.error("Error in background geocoding:", err);
+      } finally {
+        setCountriesLoading(false);
       }
     }
 
@@ -212,9 +225,9 @@ export function useAuth() {
     setCountries,
     setLastRefreshed,
     setActivitiesLoading,
+    setCountriesLoading,
     setAthleteLoading,
     setIsAuthenticated,
-    setLoadingText,
   ]);
 
   useEffect(() => {

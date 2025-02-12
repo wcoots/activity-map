@@ -16,22 +16,24 @@ import {
 } from "antd";
 
 import { activityTypeConfig } from "@/configs";
-import { useActivityStore, useAuthStore, useMapStore } from "@/store";
+import {
+  useActivityStore,
+  useAuthStore,
+  useMapStore,
+  useUIStore,
+} from "@/store";
 import { Label, LocalStorageKey } from "@/types";
 
 import styles from "./SettingsDrawer.module.css";
 
 export default function SettingsDrawer({
-  open,
-  setOpen,
   fitBoundsOfActivities,
 }: {
-  open: boolean;
-  setOpen: (open: boolean) => void;
   fitBoundsOfActivities: () => void;
 }) {
   const { athlete } = useAuthStore();
   const {
+    countriesLoading,
     activityTypeSettings,
     highestDistance,
     keywordText,
@@ -44,8 +46,8 @@ export default function SettingsDrawer({
     setYear,
     setSelectedCountry,
   } = useActivityStore();
-
   const { theme } = useMapStore();
+  const { settingsOpen, setSettingsOpen } = useUIStore();
 
   function logout() {
     window.location.href = "/api/auth/logout";
@@ -93,8 +95,8 @@ export default function SettingsDrawer({
     <Drawer
       title={header}
       footer={footer}
-      open={open}
-      onClose={() => setOpen(false)}
+      open={settingsOpen}
+      onClose={() => setSettingsOpen(false)}
     >
       <h3>Activity Types</h3>
       <div className={styles.checkboxes}>
@@ -147,9 +149,14 @@ export default function SettingsDrawer({
 
       <Divider />
 
-      <h3>Country</h3>
+      <div className={styles.heading}>
+        <h3>Country</h3>
+        {countriesLoading && <p className={styles.headingLoading}></p>}
+      </div>
+
       <Select
         mode="multiple"
+        disabled={countriesLoading}
         maxCount={1}
         style={{ width: "100%" }}
         onChange={([val]) => setSelectedCountry(val ?? null)}
@@ -180,7 +187,14 @@ export default function SettingsDrawer({
 
       <Divider />
 
-      <Button onClick={fitBoundsOfActivities}>Fit Bounds</Button>
+      <Button
+        onClick={() => {
+          fitBoundsOfActivities();
+          setSettingsOpen(false);
+        }}
+      >
+        Fit Bounds
+      </Button>
     </Drawer>
   );
 }

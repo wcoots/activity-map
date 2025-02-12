@@ -17,8 +17,6 @@ interface MapboxResponse {
   }[];
 }
 
-export const runtime = "edge";
-
 const MAPBOX_API_KEY = process.env.MAPBOX_API_KEY!;
 
 const redis = Redis.fromEnv();

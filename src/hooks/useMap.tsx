@@ -10,7 +10,7 @@ import mapboxgl, {
 
 import { activityTypeConfig, themeConfig } from "@/configs";
 import { useAuth } from "@/hooks";
-import { useActivityStore, useMapStore, useUIStore } from "@/store";
+import { useActivityStore, useMapStore } from "@/store";
 import { isMobile } from "@/utils";
 import { Activity } from "@/types";
 
@@ -50,8 +50,6 @@ export function useMap() {
   } = useActivityStore();
 
   const { mapLoading, theme, setMapLoading } = useMapStore();
-
-  const { setSettingsOpen } = useUIStore();
 
   const createMapLayers = useCallback(() => {
     if (!map.current) return;
@@ -255,7 +253,6 @@ export function useMap() {
       [Math.min(...longitudes), Math.min(...latitudes)]
     );
 
-    setSettingsOpen(false);
     map.current.fitBounds(bounds, { padding: 50 });
   }
 

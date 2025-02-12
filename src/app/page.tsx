@@ -33,7 +33,7 @@ export default function Home() {
   const { activitiesLoading } = useActivityStore();
   const { isAuthenticated, athleteLoading } = useAuthStore();
   const { mapLoading, theme } = useMapStore();
-  const { settingsOpen, loadingText, setSettingsOpen } = useUIStore();
+  const { setSettingsOpen } = useUIStore();
 
   return (
     <>
@@ -67,7 +67,7 @@ export default function Home() {
         <Card className={styles.card}>
           <div className={styles.cardContent}>
             <Spin indicator={<LoadingOutlined spin />} size="large" />
-            <div>{loadingText}</div>
+            <div>Getting activities from Strava...</div>
           </div>
         </Card>
       )}
@@ -100,11 +100,7 @@ export default function Home() {
             />
           </Tooltip>
 
-          <SettingsDrawer
-            open={settingsOpen}
-            setOpen={setSettingsOpen}
-            fitBoundsOfActivities={fitBoundsOfActivities}
-          />
+          <SettingsDrawer fitBoundsOfActivities={fitBoundsOfActivities} />
 
           <SelectedActivityCard
             fitBoundsOfSelectedActivity={fitBoundsOfSelectedActivity}

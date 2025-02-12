@@ -120,11 +120,6 @@ export type Label =
   | "Watersports"
   | "Other";
 
-export enum LoadingText {
-  STRAVA = "Getting activities from Strava...",
-  GEOCODING = "Geocoding activities...",
-}
-
 export interface CountryCount {
   name: string;
   count: number;
