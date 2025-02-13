@@ -180,6 +180,12 @@ export function useAuth() {
           JSON.stringify({ ts: Date.now().toString(), data: activities })
         );
 
+        await fetch("/api/geolocations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify([]),
+        });
+
         geocodeActivities(activities);
       } catch (err) {
         console.error("Error fetching activities:", err);
