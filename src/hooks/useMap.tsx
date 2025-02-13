@@ -8,7 +8,7 @@ import mapboxgl, {
   PaddingOptions,
 } from "mapbox-gl";
 
-import { activityTypeConfig, themeConfig } from "@/configs";
+import { activitiesConfig, themeConfig } from "@/configs";
 import { useActivities, useAuth } from "@/hooks";
 import { useActivityStore, useMapStore } from "@/store";
 import { isMobile } from "@/utils";
@@ -147,7 +147,7 @@ export function useMap() {
       type: "FeatureCollection",
       features: filterActivities(activities).reduce(
         (acc: Feature[], activity) => {
-          const configItem = activityTypeConfig.find((config) =>
+          const configItem = activitiesConfig.find((config) =>
             config.activityTypes.includes(activity.type)
           );
 

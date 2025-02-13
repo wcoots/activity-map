@@ -1,9 +1,10 @@
 import { create } from "zustand";
 import { Activity, Label } from "@/types";
-import { activityTypeConfig } from "@/configs";
+import { activitiesConfig } from "@/configs";
 
 interface ActivityState {
   activitiesLoading: boolean;
+  loadedActivityCount: number;
   activities: Activity[];
   filteredActivityIds: number[];
   hoveredActivityId: number | null;
@@ -18,6 +19,7 @@ interface ActivityState {
   countries: string[];
   selectedCountry: string | null;
   setActivitiesLoading: (loading: boolean) => void;
+  setLoadedActivityCount: (count: number) => void;
   setActivities: (activities: Activity[]) => void;
   setFilteredActivityIds: (activityIds: number[]) => void;
   setHoveredActivityId: (id: number | null) => void;
@@ -37,11 +39,12 @@ interface ActivityState {
 
 export const useActivityStore = create<ActivityState>((set) => ({
   activitiesLoading: false,
+  loadedActivityCount: 0,
   activities: [],
   filteredActivityIds: [],
   hoveredActivityId: null,
   selectedActivityId: null,
-  activityTypeSettings: activityTypeConfig.reduce(
+  activityTypeSettings: activitiesConfig.reduce(
     (acc, config) => ({ ...acc, [config.label]: true }),
     {} as Record<Label, boolean>
   ),
@@ -54,6 +57,10 @@ export const useActivityStore = create<ActivityState>((set) => ({
   countries: [],
   selectedCountry: null,
   setActivitiesLoading: (loading) => set({ activitiesLoading: loading }),
+  setLoadedActivityCount: (count) =>
+    set((state) => ({
+      loadedActivityCount: count + state.loadedActivityCount,
+    })),
   setActivities: (activities) => set({ activities }),
   setFilteredActivityIds: (activityIds) =>
     set({ filteredActivityIds: activityIds }),

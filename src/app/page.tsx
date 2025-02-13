@@ -19,6 +19,7 @@ import {
   useMapStore,
   useUIStore,
 } from "@/store";
+import { LoadingText } from "@/types";
 
 import styles from "./page.module.css";
 
@@ -31,7 +32,7 @@ export default function Home() {
     fitBoundsOfActivities,
   } = useMap();
 
-  const { activitiesLoading } = useActivityStore();
+  const { activitiesLoading, loadedActivityCount } = useActivityStore();
   const { isAuthenticated, athleteLoading } = useAuthStore();
   const { mapLoading, theme } = useMapStore();
   const { setSettingsOpen, loadingText } = useUIStore();
@@ -68,7 +69,13 @@ export default function Home() {
         <Card className={styles.card}>
           <div className={styles.cardContent}>
             <Spin indicator={<LoadingOutlined spin />} size="large" />
-            <div>{loadingText}</div>
+            <div>
+              {loadingText}
+              {loadingText === LoadingText.Strava &&
+                loadedActivityCount > 0 &&
+                ` (${loadedActivityCount}) `}
+              ...
+            </div>
           </div>
         </Card>
       )}

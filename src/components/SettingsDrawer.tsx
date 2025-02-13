@@ -15,7 +15,7 @@ import {
   Slider,
 } from "antd";
 
-import { activityTypeConfig } from "@/configs";
+import { activitiesConfig } from "@/configs";
 import {
   useActivityStore,
   useAuthStore,
@@ -120,7 +120,7 @@ export default function SettingsDrawer({
             <ColourPicker
               className={styles.colourPicker}
               value={
-                activityTypeConfig.find(
+                activitiesConfig.find(
                   (config) => config.label === (label as Label)
                 )?.colour[theme]
               }

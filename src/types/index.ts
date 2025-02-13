@@ -9,8 +9,8 @@ export enum LocalStorageKey {
 export type Theme = "light" | "dark";
 
 export enum LoadingText {
-  Strava = "Getting activities from Strava...",
-  Geocoding = "Geocoding activities...",
+  Strava = "Getting activities from Strava",
+  Geocoding = "Geocoding activities",
 }
 
 export enum ActivityType {

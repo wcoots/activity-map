@@ -24,6 +24,7 @@ export function useAuth() {
   const { setIsAuthenticated, setAthleteLoading, setAthlete } = useAuthStore();
   const {
     setActivitiesLoading,
+    setLoadedActivityCount,
     setActivities,
     setFilteredActivityIds,
     setLastRefreshed,
@@ -128,39 +129,61 @@ export function useAuth() {
           }
         }
 
-        const response = await fetch("/api/activities");
-        if (!response.ok) return;
+        const activities: Activity[] = [];
+        const fetchConfig = { page: 1, hasMore: true };
 
-        const result: RawActivity[] = await response.json();
-        const activities = result
-          .filter((activity) => activity.map.summary_polyline.length)
-          .map((activity): Activity => {
-            const positions = decodePolyline(activity.map.summary_polyline);
-            const longitudes = positions.map((p) => p.lng);
-            const latitudes = positions.map((p) => p.lat);
-            const bounds = new LngLatBounds(
-              [Math.max(...longitudes), Math.max(...latitudes)],
-              [Math.min(...longitudes), Math.min(...latitudes)]
-            );
+        while (fetchConfig.hasMore) {
+          const response = await fetch("/api/activities", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ page: fetchConfig.page }),
+          });
 
-            return {
-              id: activity.id,
-              name: activity.name,
-              distance: activity.distance,
-              movingTime: activity.moving_time,
-              elapsedTime: activity.elapsed_time,
-              totalElevationGain: activity.total_elevation_gain,
-              averageSpeed: activity.average_speed,
-              type: activity.sport_type,
-              startDate: new Date(activity.start_date),
-              positions,
-              bounds,
-              location: null,
-            };
-          })
-          .reverse();
+          if (!response.ok) break;
 
-        const geocodedActivities = await geocodeActivities(activities);
+          const result: RawActivity[] = await response.json();
+
+          if (result.length === 0) break;
+
+          const processedActivities = result
+            .filter((activity) => activity.map.summary_polyline.length)
+            .map((activity): Activity => {
+              const positions = decodePolyline(activity.map.summary_polyline);
+              const longitudes = positions.map((p) => p.lng);
+              const latitudes = positions.map((p) => p.lat);
+              const bounds = new LngLatBounds(
+                [Math.max(...longitudes), Math.max(...latitudes)],
+                [Math.min(...longitudes), Math.min(...latitudes)]
+              );
+
+              return {
+                id: activity.id,
+                name: activity.name,
+                distance: activity.distance,
+                movingTime: activity.moving_time,
+                elapsedTime: activity.elapsed_time,
+                totalElevationGain: activity.total_elevation_gain,
+                averageSpeed: activity.average_speed,
+                type: activity.sport_type,
+                startDate: new Date(activity.start_date),
+                positions,
+                bounds,
+                location: null,
+              };
+            });
+
+          setLoadedActivityCount(processedActivities.length);
+
+          activities.push(...processedActivities);
+
+          // If fewer than 200 results are returned, we've reached the end
+          fetchConfig.hasMore = result.length === 200;
+          fetchConfig.page++;
+        }
+
+        const geocodedActivities = await geocodeActivities(
+          activities.reverse()
+        );
 
         setActivities(geocodedActivities);
         setFilteredActivityIds(geocodedActivities.map((a) => a.id));

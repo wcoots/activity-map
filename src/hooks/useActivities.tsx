@@ -1,7 +1,7 @@
 "use client";
 import { useCallback } from "react";
 import { useActivityStore } from "@/store";
-import { activityTypeConfig } from "@/configs";
+import { activitiesConfig } from "@/configs";
 import { Activity } from "@/types";
 
 export function useActivities() {
@@ -23,7 +23,7 @@ export function useActivities() {
       const maximumDistanceMetres = maximumDistance * 1000;
 
       const filteredActivities = activities.filter((activity) => {
-        const configItem = activityTypeConfig.find((config) =>
+        const configItem = activitiesConfig.find((config) =>
           config.activityTypes.includes(activity.type)
         );
 

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getBaseUrl } from "../utils";
 import { RawActivity } from "@/types";
@@ -11,28 +11,34 @@ async function refreshAccessToken() {
   return data.success;
 }
 
-export async function GET(): Promise<NextResponse> {
-  const { get: getCookie } = await cookies();
-  let accessToken = getCookie("strava_access_token")?.value;
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  try {
+    const { page } = await request.json();
 
-  if (!accessToken) {
-    const refreshed = await refreshAccessToken();
-    if (!refreshed) {
+    if (!page || typeof page !== "number" || page < 1) {
       return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
+        { error: "Invalid page number" },
+        { status: 400 }
       );
     }
-    accessToken = getCookie("strava_access_token")?.value;
-  }
 
-  const baseUrl = "https://www.strava.com/api/v3/athlete/activities";
-  const perPage = 200;
+    const { get: getCookie } = await cookies();
+    let accessToken = getCookie("strava_access_token")?.value;
 
-  async function fetchAllPages(
-    page = 1,
-    accumulatedActivities: RawActivity[] = []
-  ) {
+    if (!accessToken) {
+      const refreshed = await refreshAccessToken();
+      if (!refreshed) {
+        return NextResponse.json(
+          { error: "Authentication required" },
+          { status: 401 }
+        );
+      }
+      accessToken = getCookie("strava_access_token")?.value;
+    }
+
+    const baseUrl = "https://www.strava.com/api/v3/athlete/activities";
+    const perPage = 200;
+
     const response = await fetch(
       `${baseUrl}?per_page=${perPage}&page=${page}`,
       { method: "GET", headers: { Authorization: `Bearer ${accessToken}` } }
@@ -46,15 +52,7 @@ export async function GET(): Promise<NextResponse> {
     }
 
     const result: RawActivity[] = await response.json();
-    const allActivities = [...accumulatedActivities, ...result];
-
-    if (result.length < perPage) return allActivities;
-    return fetchAllPages(page + 1, allActivities);
-  }
-
-  try {
-    const allActivities = await fetchAllPages();
-    return NextResponse.json(allActivities);
+    return NextResponse.json(result);
   } catch {
     return NextResponse.json(
       { error: "Failed to retrieve activities" },
