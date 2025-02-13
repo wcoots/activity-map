@@ -183,7 +183,7 @@ export function useAuth() {
         await fetch("/api/geolocations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify([]),
+          body: JSON.stringify(activities),
         });
 
         geocodeActivities(activities);
