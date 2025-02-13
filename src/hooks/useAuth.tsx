@@ -5,7 +5,7 @@ import { message } from "antd";
 import dayjs from "dayjs";
 import { LngLat, LngLatBounds } from "mapbox-gl";
 
-import { useAuthStore, useActivityStore, useUIStore } from "@/store";
+import { useAuthStore, useActivityStore } from "@/store";
 import { decodePolyline, unique } from "@/utils";
 import {
   LocalStorageKey,
@@ -14,7 +14,6 @@ import {
   RawAthelete,
   Activity,
   GeocodedActivities,
-  LoadingText,
 } from "@/types";
 
 export function useAuth() {
@@ -30,7 +29,6 @@ export function useAuth() {
     setLastRefreshed,
     setCountries,
   } = useActivityStore();
-  const { setLoadingText } = useUIStore();
 
   function extractCountries(activities: Activity[]) {
     return unique(
@@ -46,7 +44,6 @@ export function useAuth() {
       try {
         setAthleteLoading(true);
         setActivitiesLoading(true);
-        setLoadingText(LoadingText.Strava);
 
         const response = await fetch("/api/auth/check");
 
@@ -103,29 +100,37 @@ export function useAuth() {
 
     async function fetchActivities() {
       try {
-        const cachedActivities = localStorage.getItem(
-          LocalStorageKey.Activities
-        );
+        const timestampCacheKey = `${LocalStorageKey.Activities}-ts`;
+        const cacheTimestamp = Number(localStorage.getItem(timestampCacheKey));
 
-        if (cachedActivities) {
-          const { ts, data: activities }: { ts: string; data: Activity[] } =
-            JSON.parse(cachedActivities);
-          setLastRefreshed(dayjs(parseInt(ts, 10)).toDate());
+        // if cache is less than an hour old, use it
+        if (Date.now() - cacheTimestamp < 3600000) {
+          const pageCountCacheKey = `${LocalStorageKey.Activities}-pages`;
+          const pageCount = Number(localStorage.getItem(pageCountCacheKey));
 
-          const cacheAge = Date.now() - parseInt(ts, 10);
+          if (pageCount) {
+            const cachedActivities: Activity[] = [];
 
-          if (cacheAge < 3600000) {
-            activities.forEach((activity) => {
+            for (let page = 1; page <= pageCount; page++) {
+              const cacheKey = `${LocalStorageKey.Activities}-${page}`;
+              const activities = localStorage.getItem(cacheKey);
+              if (activities) cachedActivities.push(...JSON.parse(activities));
+            }
+
+            cachedActivities.forEach((activity) => {
               const { bounds, startDate } = activity;
               // parse bounds and startDate from JSON
               activity.bounds = new LngLatBounds(bounds._sw, bounds._ne);
               activity.startDate = new Date(startDate);
             });
 
-            setActivities(activities);
-            setFilteredActivityIds(activities.map((activity) => activity.id));
-            setCountries(extractCountries(activities));
-            return;
+            if (cachedActivities.length > 0) {
+              setLastRefreshed(new Date(cacheTimestamp));
+              setActivities(cachedActivities);
+              setFilteredActivityIds(cachedActivities.map(({ id }) => id));
+              setCountries(extractCountries(cachedActivities));
+              return;
+            }
           }
         }
 
@@ -142,7 +147,6 @@ export function useAuth() {
           if (!response.ok) break;
 
           const result: RawActivity[] = await response.json();
-
           if (result.length === 0) break;
 
           const processedActivities = result
@@ -170,32 +174,34 @@ export function useAuth() {
                 bounds,
                 location: null,
               };
-            });
+            })
+            .reverse();
 
-          setLoadedActivityCount(processedActivities.length);
+          const geocodedActivities = await geocodeActivities(
+            processedActivities
+          );
 
-          activities.push(...processedActivities);
+          setLoadedActivityCount(geocodedActivities.length);
+          activities.push(...geocodedActivities);
 
-          // If fewer than 200 results are returned, we've reached the end
+          const cacheKey = `${LocalStorageKey.Activities}-${fetchConfig.page}`;
+          localStorage.setItem(cacheKey, JSON.stringify(geocodedActivities));
+
+          const pagesCacheKey = `${LocalStorageKey.Activities}-pages`;
+          localStorage.setItem(pagesCacheKey, fetchConfig.page.toString());
+
           fetchConfig.hasMore = result.length === 200;
           fetchConfig.page++;
         }
 
-        const geocodedActivities = await geocodeActivities(
-          activities.reverse()
-        );
-
-        setActivities(geocodedActivities);
-        setFilteredActivityIds(geocodedActivities.map((a) => a.id));
-        setCountries(extractCountries(geocodedActivities));
+        setActivities(activities);
+        setFilteredActivityIds(activities.map((a) => a.id));
+        setCountries(extractCountries(activities));
         setLastRefreshed(new Date());
 
         localStorage.setItem(
-          LocalStorageKey.Activities,
-          JSON.stringify({
-            ts: Date.now().toString(),
-            data: geocodedActivities,
-          })
+          `${LocalStorageKey.Activities}-ts`,
+          Date.now().toString()
         );
       } catch (err) {
         console.error("Error fetching activities:", err);
@@ -206,7 +212,6 @@ export function useAuth() {
 
     async function geocodeActivities(activities: Activity[]) {
       try {
-        setLoadingText(LoadingText.Geocoding);
         const activityInitialPositions: { [activityId: number]: LngLat } = {};
         activities.forEach((activity) => {
           activityInitialPositions[activity.id] = activity.positions[0];
@@ -233,7 +238,6 @@ export function useAuth() {
 
     checkAuth();
   }, [
-    setLoadingText,
     setAthlete,
     setActivities,
     setFilteredActivityIds,
