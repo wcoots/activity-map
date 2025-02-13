@@ -242,6 +242,7 @@ export function useAuth() {
     setActivitiesLoading,
     setAthleteLoading,
     setIsAuthenticated,
+    setLoadedActivityCount,
   ]);
 
   useEffect(() => {
