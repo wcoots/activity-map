@@ -13,17 +13,22 @@ import { useActivities, useAuth } from "@/hooks";
 import { useActivityStore, useMapStore } from "@/store";
 import { isMobile } from "@/utils";
 
-const ACTIVITY_SOURCE = "activity-source";
-const ACTIVITY_LAYER = "activity-layer";
-const INTERACTIVE_ACTIVITY_LAYER = "interactive-activity-layer";
-const HOVERED_ACTIVITY_LAYER = "hovered-activity-layer";
-const SELECTED_ACTIVITY_LAYER = "selected-activity-layer";
+enum Sources {
+  ActivitySource = "activity-source",
+}
+
+enum Layers {
+  ActivityLayer = "activity-layer",
+  InteractiveActivityLayer = "interactive-activity-layer",
+  HoveredActivityLayer = "hovered-activity-layer",
+  SelectedActivityLayer = "selected-activity-layer",
+}
 
 const INTERACTIVE_LAYERS = [
-  ACTIVITY_LAYER,
-  INTERACTIVE_ACTIVITY_LAYER,
-  HOVERED_ACTIVITY_LAYER,
-  SELECTED_ACTIVITY_LAYER,
+  Layers.ActivityLayer,
+  Layers.InteractiveActivityLayer,
+  Layers.HoveredActivityLayer,
+  Layers.SelectedActivityLayer,
 ];
 
 export function useMap() {
@@ -49,17 +54,17 @@ export function useMap() {
   const createMapLayers = useCallback(() => {
     if (!map.current) return;
 
-    if (!map.current!.getSource(ACTIVITY_SOURCE)) {
-      map.current!.addSource(ACTIVITY_SOURCE, {
+    if (!map.current!.getSource(Sources.ActivitySource)) {
+      map.current!.addSource(Sources.ActivitySource, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
       });
     }
 
-    if (!map.current.getLayer(INTERACTIVE_ACTIVITY_LAYER)) {
+    if (!map.current.getLayer(Layers.InteractiveActivityLayer)) {
       map.current.addLayer({
-        id: INTERACTIVE_ACTIVITY_LAYER,
-        source: ACTIVITY_SOURCE,
+        id: Layers.InteractiveActivityLayer,
+        source: Sources.ActivitySource,
         filter: ["==", ["get", "selected"], false],
         type: "line",
         layout: {
@@ -73,10 +78,10 @@ export function useMap() {
       });
     }
 
-    if (!map.current.getLayer(ACTIVITY_LAYER)) {
+    if (!map.current.getLayer(Layers.ActivityLayer)) {
       map.current.addLayer({
-        id: ACTIVITY_LAYER,
-        source: ACTIVITY_SOURCE,
+        id: Layers.ActivityLayer,
+        source: Sources.ActivitySource,
         filter: [
           "all",
           ["==", ["get", "selected"], false],
@@ -95,10 +100,10 @@ export function useMap() {
       });
     }
 
-    if (!map.current.getLayer(HOVERED_ACTIVITY_LAYER)) {
+    if (!map.current.getLayer(Layers.HoveredActivityLayer)) {
       map.current.addLayer({
-        id: HOVERED_ACTIVITY_LAYER,
-        source: ACTIVITY_SOURCE,
+        id: Layers.HoveredActivityLayer,
+        source: Sources.ActivitySource,
         filter: [
           "all",
           ["==", ["get", "selected"], false],
@@ -117,10 +122,10 @@ export function useMap() {
       });
     }
 
-    if (!map.current.getLayer(SELECTED_ACTIVITY_LAYER)) {
+    if (!map.current.getLayer(Layers.SelectedActivityLayer)) {
       map.current.addLayer({
-        id: SELECTED_ACTIVITY_LAYER,
-        source: ACTIVITY_SOURCE,
+        id: Layers.SelectedActivityLayer,
+        source: Sources.ActivitySource,
         filter: ["==", ["get", "selected"], true],
         type: "line",
         layout: {
@@ -175,7 +180,7 @@ export function useMap() {
     };
 
     map.current
-      ?.getSource<GeoJSONSource>(ACTIVITY_SOURCE)
+      ?.getSource<GeoJSONSource>(Sources.ActivitySource)
       ?.setData(activityFeatureCollection);
   }, [
     theme,
