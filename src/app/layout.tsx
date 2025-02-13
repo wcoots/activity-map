@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { GoogleAnalytics } from "@next/third-parties/google";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -23,8 +22,6 @@ export const metadata: Metadata = {
   description: "Built by wcoots",
 };
 
-const GA_ID = process.env.GA_ID;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -37,7 +34,6 @@ export default function RootLayout({
         <Analytics />
         <SpeedInsights />
       </body>
-      {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
     </html>
   );
 }
