@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { message } from "antd";
 import dayjs from "dayjs";
-import { LngLatBounds } from "mapbox-gl";
+import { LngLat, LngLatBounds } from "mapbox-gl";
 
 import { useAuthStore, useActivityStore } from "@/store";
 import { decodePolyline } from "@/utils";
@@ -180,12 +180,6 @@ export function useAuth() {
           JSON.stringify({ ts: Date.now().toString(), data: activities })
         );
 
-        await fetch("/api/geolocations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(activities),
-        });
-
         geocodeActivities(activities);
       } catch (err) {
         console.error("Error fetching activities:", err);
@@ -196,10 +190,15 @@ export function useAuth() {
 
     async function geocodeActivities(activities: Activity[]) {
       try {
+        const activityInitialPositions: { [activityId: number]: LngLat } = {};
+        activities.forEach((activity) => {
+          activityInitialPositions[activity.id] = activity.positions[0];
+        });
+
         const response = await fetch("/api/geocoding", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(activities),
+          body: JSON.stringify(activityInitialPositions),
         });
         if (!response.ok) return;
 
