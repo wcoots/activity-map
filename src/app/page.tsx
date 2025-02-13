@@ -34,7 +34,7 @@ export default function Home() {
   const { activitiesLoading } = useActivityStore();
   const { isAuthenticated, athleteLoading } = useAuthStore();
   const { mapLoading, theme } = useMapStore();
-  const { setSettingsOpen } = useUIStore();
+  const { setSettingsOpen, loadingText } = useUIStore();
 
   return (
     <>
@@ -68,7 +68,7 @@ export default function Home() {
         <Card className={styles.card}>
           <div className={styles.cardContent}>
             <Spin indicator={<LoadingOutlined spin />} size="large" />
-            <div>Getting activities from Strava...</div>
+            <div>{loadingText}</div>
           </div>
         </Card>
       )}

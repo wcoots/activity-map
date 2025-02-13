@@ -33,7 +33,6 @@ export default function SettingsDrawer({
 }) {
   const { athlete } = useAuthStore();
   const {
-    countriesLoading,
     activityTypeSettings,
     highestDistance,
     keywordText,
@@ -149,14 +148,9 @@ export default function SettingsDrawer({
 
       <Divider />
 
-      <div className={styles.heading}>
-        <h3>Country</h3>
-        {countriesLoading && <p className={styles.headingLoading}></p>}
-      </div>
-
+      <h3>Country</h3>
       <Select
         mode="multiple"
-        disabled={countriesLoading}
         maxCount={1}
         style={{ width: "100%" }}
         onChange={([val]) => setSelectedCountry(val ?? null)}

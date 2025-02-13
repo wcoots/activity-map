@@ -5,7 +5,7 @@ import { message } from "antd";
 import dayjs from "dayjs";
 import { LngLat, LngLatBounds } from "mapbox-gl";
 
-import { useAuthStore, useActivityStore } from "@/store";
+import { useAuthStore, useActivityStore, useUIStore } from "@/store";
 import { decodePolyline } from "@/utils";
 import {
   LocalStorageKey,
@@ -15,6 +15,7 @@ import {
   Activity,
   GeocodedActivities,
   CountryCount,
+  LoadingText,
 } from "@/types";
 
 export function useAuth() {
@@ -24,12 +25,12 @@ export function useAuth() {
   const { setIsAuthenticated, setAthleteLoading, setAthlete } = useAuthStore();
   const {
     setActivitiesLoading,
-    setCountriesLoading,
     setActivities,
     setFilteredActivityIds,
     setLastRefreshed,
     setCountries,
   } = useActivityStore();
+  const { setLoadingText } = useUIStore();
 
   function extractCountries(activities: Activity[]): CountryCount[] {
     const countries: CountryCount[] = [];
@@ -54,7 +55,7 @@ export function useAuth() {
       try {
         setAthleteLoading(true);
         setActivitiesLoading(true);
-        setCountriesLoading(true);
+        setLoadingText(LoadingText.Strava);
 
         const response = await fetch("/api/auth/check");
 
@@ -133,7 +134,6 @@ export function useAuth() {
             setActivities(activities);
             setFilteredActivityIds(activities.map((activity) => activity.id));
             setCountries(extractCountries(activities));
-            setCountriesLoading(false);
             return;
           }
         }
@@ -170,17 +170,20 @@ export function useAuth() {
           })
           .reverse();
 
-        setActivities(activities);
-        setFilteredActivityIds(activities.map((a) => a.id));
-        setCountries(extractCountries(activities));
+        const geocodedActivities = await geocodeActivities(activities);
+
+        setActivities(geocodedActivities);
+        setFilteredActivityIds(geocodedActivities.map((a) => a.id));
+        setCountries(extractCountries(geocodedActivities));
         setLastRefreshed(new Date());
 
         localStorage.setItem(
           LocalStorageKey.Activities,
-          JSON.stringify({ ts: Date.now().toString(), data: activities })
+          JSON.stringify({
+            ts: Date.now().toString(),
+            data: geocodedActivities,
+          })
         );
-
-        geocodeActivities(activities);
       } catch (err) {
         console.error("Error fetching activities:", err);
       } finally {
@@ -190,6 +193,7 @@ export function useAuth() {
 
     async function geocodeActivities(activities: Activity[]) {
       try {
+        setLoadingText(LoadingText.Geocoding);
         const activityInitialPositions: { [activityId: number]: LngLat } = {};
         activities.forEach((activity) => {
           activityInitialPositions[activity.id] = activity.positions[0];
@@ -200,38 +204,29 @@ export function useAuth() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(activityInitialPositions),
         });
-        if (!response.ok) return;
+        if (!response.ok) return [];
 
         const result: GeocodedActivities = await response.json();
 
-        const updatedActivities = activities.map((activity) => ({
+        return activities.map((activity) => ({
           ...activity,
           location: result[activity.id] ?? null,
         }));
-
-        setActivities(updatedActivities);
-        setCountries(extractCountries(updatedActivities));
-
-        localStorage.setItem(
-          LocalStorageKey.Activities,
-          JSON.stringify({ ts: Date.now().toString(), data: updatedActivities })
-        );
       } catch (err) {
-        console.error("Error in background geocoding:", err);
-      } finally {
-        setCountriesLoading(false);
+        console.error("Error fetching geocodes:", err);
+        return [];
       }
     }
 
     checkAuth();
   }, [
+    setLoadingText,
     setAthlete,
     setActivities,
     setFilteredActivityIds,
     setCountries,
     setLastRefreshed,
     setActivitiesLoading,
-    setCountriesLoading,
     setAthleteLoading,
     setIsAuthenticated,
   ]);

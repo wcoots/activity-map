@@ -18,37 +18,6 @@
   margin-left: auto;
 }
 
-.heading {
-  display: inline-flex;
-  gap: 15px;
-  align-items: flex-end;
-}
-
-.headingLoading {
-  font-size: 0.7em;
-  color: #666;
-}
-
-@keyframes ellipsis {
-  0% {
-    content: "Data still loading";
-  }
-  33% {
-    content: "Data still loading.";
-  }
-  66% {
-    content: "Data still loading..";
-  }
-  100% {
-    content: "Data still loading...";
-  }
-}
-
-.headingLoading::after {
-  content: "Data still loading";
-  animation: ellipsis 1s infinite steps(4);
-}
-
 .footer {
   display: flex;
   align-items: center;
