@@ -9,10 +9,9 @@ import mapboxgl, {
 } from "mapbox-gl";
 
 import { activityTypeConfig, themeConfig } from "@/configs";
-import { useAuth } from "@/hooks";
+import { useActivities, useAuth } from "@/hooks";
 import { useActivityStore, useMapStore } from "@/store";
 import { isMobile } from "@/utils";
-import { Activity } from "@/types";
 
 const ACTIVITY_SOURCE = "activity-source";
 const ACTIVITY_LAYER = "activity-layer";
@@ -28,6 +27,7 @@ const INTERACTIVE_LAYERS = [
 ];
 
 export function useMap() {
+  const { filterActivities } = useActivities();
   const { contextHolder } = useAuth();
 
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -39,19 +39,11 @@ export function useMap() {
     filteredActivityIds,
     hoveredActivityId,
     selectedActivityId,
-    activityTypeSettings,
-    minimumDistance,
-    maximumDistance,
-    keywordText,
-    year,
-    selectedCountry,
-    setFilteredActivityIds,
     setHoveredActivityId,
     setSelectedActivityId,
     setMaximumDistance,
     setHighestDistance,
   } = useActivityStore();
-
   const { mapLoading, theme, setMapLoading } = useMapStore();
 
   const createMapLayers = useCallback(() => {
@@ -144,62 +136,6 @@ export function useMap() {
       });
     }
   }, []);
-
-  const filterActivities = useCallback(
-    (activities: Activity[]): Activity[] => {
-      const minimumDistanceMetres = minimumDistance * 1000;
-      const maximumDistanceMetres = maximumDistance * 1000;
-
-      const filteredActivities = activities.filter((activity) => {
-        const configItem = activityTypeConfig.find((config) =>
-          config.activityTypes.includes(activity.type)
-        );
-
-        if (!configItem) return;
-
-        const typeSelected = activityTypeSettings[configItem.label];
-        const distanceInRange =
-          activity.distance >= minimumDistanceMetres &&
-          activity.distance <= maximumDistanceMetres;
-        const textMatch = keywordText.length
-          ? activity.name.toLowerCase().includes(keywordText.toLowerCase())
-          : true;
-        const yearMatch = year
-          ? activity.startDate.getFullYear() === year
-          : true;
-        const countryMatch = selectedCountry
-          ? activity.location?.country === selectedCountry
-          : true;
-
-        return (
-          typeSelected &&
-          distanceInRange &&
-          textMatch &&
-          yearMatch &&
-          countryMatch
-        );
-      });
-
-      if (!filteredActivities.find(({ id }) => id === selectedActivityId)) {
-        setSelectedActivityId(null);
-      }
-
-      setFilteredActivityIds(filteredActivities.map(({ id }) => id));
-
-      return filteredActivities;
-    },
-    [
-      activityTypeSettings,
-      minimumDistance,
-      maximumDistance,
-      keywordText,
-      year,
-      selectedCountry,
-      selectedActivityId,
-      setSelectedActivityId,
-      setFilteredActivityIds,
-    ]
-  );
 
   const populateSource = useCallback(() => {
     const activityFeatureCollection: FeatureCollection = {

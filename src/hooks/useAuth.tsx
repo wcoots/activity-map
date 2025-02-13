@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import { LngLat, LngLatBounds } from "mapbox-gl";
 
 import { useAuthStore, useActivityStore, useUIStore } from "@/store";
-import { decodePolyline } from "@/utils";
+import { decodePolyline, unique } from "@/utils";
 import {
   LocalStorageKey,
   Athlete,
@@ -14,7 +14,6 @@ import {
   RawAthelete,
   Activity,
   GeocodedActivities,
-  CountryCount,
   LoadingText,
 } from "@/types";
 
@@ -32,21 +31,12 @@ export function useAuth() {
   } = useActivityStore();
   const { setLoadingText } = useUIStore();
 
-  function extractCountries(activities: Activity[]): CountryCount[] {
-    const countries: CountryCount[] = [];
-
-    activities.forEach((activity) => {
-      if (!activity.location) return;
-
-      const country = countries.find((country) => {
-        return country.name === activity.location?.country;
-      });
-
-      if (country) country.count += 1;
-      else countries.push({ name: activity.location.country, count: 1 });
-    });
-
-    return countries;
+  function extractCountries(activities: Activity[]) {
+    return unique(
+      activities
+        .filter((activity) => activity.location)
+        .map((activity) => activity.location!.country)
+    );
   }
 
   useEffect(() => {

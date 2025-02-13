@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Activity, Label, CountryCount } from "@/types";
+import { Activity, Label } from "@/types";
 import { activityTypeConfig } from "@/configs";
 
 interface ActivityState {
@@ -15,7 +15,7 @@ interface ActivityState {
   keywordText: string;
   year: number | null;
   lastRefreshed: Date | null;
-  countries: CountryCount[];
+  countries: string[];
   selectedCountry: string | null;
   setActivitiesLoading: (loading: boolean) => void;
   setActivities: (activities: Activity[]) => void;
@@ -31,7 +31,7 @@ interface ActivityState {
   setKeywordText: (text: string) => void;
   setYear: (year: number | null) => void;
   setLastRefreshed: (date: Date) => void;
-  setCountries: (countries: CountryCount[]) => void;
+  setCountries: (countries: string[]) => void;
   setSelectedCountry: (country: string | null) => void;
 }
 

@@ -124,8 +124,3 @@ export type Label =
   | "Snowsports"
   | "Watersports"
   | "Other";
-
-export interface CountryCount {
-  name: string;
-  count: number;
-}

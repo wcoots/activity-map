@@ -95,7 +95,10 @@ export default function SettingsDrawer({
       title={header}
       footer={footer}
       open={settingsOpen}
-      onClose={() => setSettingsOpen(false)}
+      onClose={() => {
+        setSettingsOpen(false);
+        fitBoundsOfActivities();
+      }}
     >
       <h3>Activity Types</h3>
       <div className={styles.checkboxes}>
@@ -156,8 +159,8 @@ export default function SettingsDrawer({
         onChange={([val]) => setSelectedCountry(val ?? null)}
         placeholder="Please select"
         options={countries.map((country) => ({
-          label: `${country.name} (${country.count})`,
-          value: country.name,
+          label: country,
+          value: country,
         }))}
       />
 
