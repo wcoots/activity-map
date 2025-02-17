@@ -5,9 +5,9 @@ interface AthletesTable {
   id: number;
   created_ts: GeneratedAlways<Date>;
   updated_ts: ColumnType<Date, Date, Date>;
-  username: string;
-  forename: string;
-  surname: string;
+  username: string | null;
+  forename: string | null;
+  surname: string | null;
   bio: string | null;
   city: string | null;
   state: string | null;

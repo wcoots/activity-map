@@ -61,9 +61,9 @@ export enum ActivityType {
 
 export interface RawAthelete {
   id: number;
-  username: string;
-  firstname: string;
-  lastname: string;
+  username: string | null;
+  firstname: string | null;
+  lastname: string | null;
   bio: string | null;
   city: string | null;
   state: string | null;

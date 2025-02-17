@@ -78,8 +78,8 @@ export async function GET(): Promise<NextResponse> {
 
     const athlete: Athlete = {
       id: rawAthlete.id,
-      firstName: rawAthlete.firstname,
-      lastName: rawAthlete.lastname,
+      firstName: rawAthlete.firstname ?? "",
+      lastName: rawAthlete.lastname ?? "",
       imageUrl: rawAthlete.profile_medium,
       totalActivityCount: totalActivityCount,
     };
