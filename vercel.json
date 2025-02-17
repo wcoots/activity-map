@@ -1,7 +1,7 @@
 {
   "regions": ["lhr1"],
   "functions": {
-    "api/activities/*": {
+    "app/api/activities/*": {
       "maxDuration": 60
     }
   }
