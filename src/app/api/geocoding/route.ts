@@ -4,7 +4,7 @@ import { Redis } from "@upstash/redis";
 import { LngLat } from "mapbox-gl";
 
 import { db } from "@/app/api/kysely";
-import { isNextResponse, unique } from "@/app/api/utils";
+import { unique } from "@/app/api/utils";
 
 interface MapboxResponse {
   batch: {
@@ -17,6 +17,13 @@ interface MapboxResponse {
       };
     }[];
   }[];
+}
+
+interface GeolocationQuery {
+  id: number;
+  types: string[];
+  latitude: number;
+  longitude: number;
 }
 
 const MAPBOX_API_KEY = process.env.MAPBOX_API_KEY!;
@@ -32,6 +39,39 @@ function removeDuplicateLocations(address: string | null): string | null {
 
 function generateCacheKey(latitude: number, longitude: number): string {
   return `${latitude},${longitude}`;
+}
+
+async function fetchMapboxGeolocationData(
+  geolocationQueries: GeolocationQuery[]
+) {
+  if (geolocationQueries.length === 0) return [];
+
+  const baseUrl = `https://api.mapbox.com/search/geocode/v6/batch?access_token=${MAPBOX_API_KEY}`;
+
+  const mapboxResponses = await Promise.all(
+    Array.from({
+      length: Math.ceil(geolocationQueries.length / 1000),
+    }).map(async (_, index) => {
+      const start = index * 1000;
+      const end = start + 1000;
+
+      const response = await fetch(baseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(geolocationQueries.slice(start, end)),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch geolocation data");
+      }
+
+      const { batch }: MapboxResponse = await response.json();
+
+      return batch;
+    })
+  );
+
+  return mapboxResponses.flat();
 }
 
 async function fetchGeolocationData(activityIds: number[]) {
@@ -58,7 +98,6 @@ async function stashGeolocationData(geocodedActivities: GeocodedActivities) {
 
 export async function POST(request: NextRequest) {
   try {
-    const baseUrl = `https://api.mapbox.com/search/geocode/v6/batch?access_token=${MAPBOX_API_KEY}`;
     const activityInitialPositions: { [activityId: number]: LngLat } =
       await request.json();
     const geocodedActivities: GeocodedActivities = {};
@@ -90,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     const geolocationQueries = uncachedActivities
       .filter((activity): activity is Activity => activity !== null)
-      .map(({ id, positions }) => {
+      .map(({ id, positions }): GeolocationQuery => {
         const [{ lat: latitude, lng: longitude }] = positions;
         return {
           id,
@@ -100,28 +139,7 @@ export async function POST(request: NextRequest) {
         };
       });
 
-    async function fetchMapboxGeolocationData() {
-      if (geolocationQueries.length === 0) return [];
-
-      const response = await fetch(baseUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(geolocationQueries),
-      });
-
-      if (!response.ok) {
-        return NextResponse.json(
-          { error: "Failed to fetch geolocation data" },
-          { status: response.status }
-        );
-      }
-
-      const result: MapboxResponse = await response.json();
-      return result.batch;
-    }
-
-    const mapboxResponse = await fetchMapboxGeolocationData();
-    if (isNextResponse(mapboxResponse)) return mapboxResponse;
+    const mapboxResponse = await fetchMapboxGeolocationData(geolocationQueries);
 
     mapboxResponse.forEach(async (location, index) => {
       if (location.features.length > 0) {

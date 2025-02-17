@@ -19,11 +19,6 @@ export function unique<T>(array: T[]): T[] {
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isNextResponse(response: any): response is NextResponse {
-  return response && response.json && response.status;
-}
-
 async function refreshAccessToken() {
   const baseUrl = await getBaseUrl();
   const stravaRedirectUri = baseUrl + "/api/auth/refresh";
