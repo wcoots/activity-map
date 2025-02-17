@@ -15,7 +15,6 @@ export function useAuth() {
   const { setIsAuthenticated, setAthleteLoading, setAthlete } = useAuthStore();
   const {
     setActivitiesLoading,
-    setLoadedActivityCount,
     setActivities,
     setFilteredActivityIds,
     setLastRefreshed,
@@ -157,7 +156,6 @@ export function useAuth() {
     setActivitiesLoading,
     setAthleteLoading,
     setIsAuthenticated,
-    setLoadedActivityCount,
   ]);
 
   useEffect(() => {
