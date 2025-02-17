@@ -2,19 +2,11 @@
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { message } from "antd";
-import dayjs from "dayjs";
 import { LngLat, LngLatBounds } from "mapbox-gl";
 
 import { useAuthStore, useActivityStore } from "@/store";
 import { decodePolyline, unique } from "@/utils";
-import {
-  LocalStorageKey,
-  Athlete,
-  RawActivity,
-  RawAthelete,
-  Activity,
-  GeocodedActivities,
-} from "@/types";
+import { Athlete, RawActivity, Activity, GeocodedActivities } from "@/types";
 
 export function useAuth() {
   const searchParams = useSearchParams();
@@ -49,7 +41,8 @@ export function useAuth() {
 
         if (response.status === 200) {
           setIsAuthenticated(true);
-          await Promise.all([fetchAthlete(), fetchActivities()]);
+          const althete = await fetchAthlete();
+          if (althete) await fetchActivities(althete);
         } else {
           setIsAuthenticated(false);
         }
@@ -60,37 +53,12 @@ export function useAuth() {
 
     async function fetchAthlete() {
       try {
-        const cachedAthlete = localStorage.getItem(LocalStorageKey.Athlete);
-
-        if (cachedAthlete) {
-          const { ts, data } = JSON.parse(cachedAthlete);
-          setLastRefreshed(dayjs(parseInt(ts, 10)).toDate());
-
-          const cacheAge = Date.now() - parseInt(ts, 10);
-
-          if (cacheAge < 3600000) {
-            setAthlete(data);
-            return;
-          }
-        }
-
         const response = await fetch("/api/athlete");
         if (!response.ok) return;
 
-        const result: RawAthelete = await response.json();
-        const athlete: Athlete = {
-          id: result.id,
-          firstName: result.firstname,
-          lastName: result.lastname,
-          imageUrl: result.profile_medium,
-        };
-
+        const athlete: Athlete = await response.json();
         setAthlete(athlete);
-
-        localStorage.setItem(
-          LocalStorageKey.Athlete,
-          JSON.stringify({ ts: Date.now().toString(), data: athlete })
-        );
+        return athlete;
       } catch (err) {
         console.error("Error fetching athlete:", err);
       } finally {
@@ -98,111 +66,49 @@ export function useAuth() {
       }
     }
 
-    async function fetchActivities() {
+    async function fetchActivities(athlete: Athlete) {
       try {
-        const timestampCacheKey = `${LocalStorageKey.Activities}-ts`;
-        const cacheTimestamp = Number(localStorage.getItem(timestampCacheKey));
+        const response = await fetch("/api/activities", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ athlete }),
+        });
 
-        // if cache is less than an hour old, use it
-        if (Date.now() - cacheTimestamp < 3600000) {
-          const pageCountCacheKey = `${LocalStorageKey.Activities}-pages`;
-          const pageCount = Number(localStorage.getItem(pageCountCacheKey));
+        if (!response.ok) return;
 
-          if (pageCount) {
-            const cachedActivities: Activity[] = [];
+        const result: RawActivity[] = await response.json();
 
-            for (let page = 1; page <= pageCount; page++) {
-              const cacheKey = `${LocalStorageKey.Activities}-${page}`;
-              const activities = localStorage.getItem(cacheKey);
-              if (activities) cachedActivities.push(...JSON.parse(activities));
-            }
+        const activities = result
+          .filter((activity) => activity.map.summary_polyline.length)
+          .map((activity): Activity => {
+            const positions = decodePolyline(activity.map.summary_polyline);
+            const longitudes = positions.map((p) => p.lng);
+            const latitudes = positions.map((p) => p.lat);
+            const bounds = new LngLatBounds(
+              [Math.max(...longitudes), Math.max(...latitudes)],
+              [Math.min(...longitudes), Math.min(...latitudes)]
+            );
 
-            cachedActivities.forEach((activity) => {
-              const { bounds, startDate } = activity;
-              // parse bounds and startDate from JSON
-              activity.bounds = new LngLatBounds(bounds._sw, bounds._ne);
-              activity.startDate = new Date(startDate);
-            });
-
-            if (cachedActivities.length > 0) {
-              setLastRefreshed(new Date(cacheTimestamp));
-              setActivities(cachedActivities);
-              setFilteredActivityIds(cachedActivities.map(({ id }) => id));
-              setCountries(extractCountries(cachedActivities));
-              return;
-            }
-          }
-        }
-
-        const activities: Activity[] = [];
-        const fetchConfig = { page: 1, hasMore: true };
-
-        while (fetchConfig.hasMore) {
-          const response = await fetch("/api/activities", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ page: fetchConfig.page }),
+            return {
+              id: activity.id,
+              name: activity.name,
+              distance: activity.distance,
+              movingTime: activity.moving_time,
+              totalElevationGain: activity.total_elevation_gain,
+              averageSpeed: activity.average_speed,
+              type: activity.sport_type,
+              startDate: new Date(activity.start_date),
+              positions,
+              bounds,
+              location: null,
+            };
           });
 
-          if (!response.ok) break;
-
-          const result: RawActivity[] = await response.json();
-          if (result.length === 0) break;
-
-          const processedActivities = result
-            .filter((activity) => activity.map.summary_polyline.length)
-            .map((activity): Activity => {
-              const positions = decodePolyline(activity.map.summary_polyline);
-              const longitudes = positions.map((p) => p.lng);
-              const latitudes = positions.map((p) => p.lat);
-              const bounds = new LngLatBounds(
-                [Math.max(...longitudes), Math.max(...latitudes)],
-                [Math.min(...longitudes), Math.min(...latitudes)]
-              );
-
-              return {
-                id: activity.id,
-                name: activity.name,
-                distance: activity.distance,
-                movingTime: activity.moving_time,
-                elapsedTime: activity.elapsed_time,
-                totalElevationGain: activity.total_elevation_gain,
-                averageSpeed: activity.average_speed,
-                type: activity.sport_type,
-                startDate: new Date(activity.start_date),
-                positions,
-                bounds,
-                location: null,
-              };
-            })
-            .reverse();
-
-          const geocodedActivities = await geocodeActivities(
-            processedActivities
-          );
-
-          setLoadedActivityCount(geocodedActivities.length);
-          activities.push(...geocodedActivities);
-
-          const cacheKey = `${LocalStorageKey.Activities}-${fetchConfig.page}`;
-          localStorage.setItem(cacheKey, JSON.stringify(geocodedActivities));
-
-          const pagesCacheKey = `${LocalStorageKey.Activities}-pages`;
-          localStorage.setItem(pagesCacheKey, fetchConfig.page.toString());
-
-          fetchConfig.hasMore = result.length === 200;
-          fetchConfig.page++;
-        }
-
-        setActivities(activities);
-        setFilteredActivityIds(activities.map((a) => a.id));
-        setCountries(extractCountries(activities));
+        const geocodedActivities = await geocodeActivities(activities);
+        setActivities(geocodedActivities);
+        setFilteredActivityIds(geocodedActivities.map((a) => a.id));
+        setCountries(extractCountries(geocodedActivities));
         setLastRefreshed(new Date());
-
-        localStorage.setItem(
-          `${LocalStorageKey.Activities}-ts`,
-          Date.now().toString()
-        );
       } catch (err) {
         console.error("Error fetching activities:", err);
       } finally {

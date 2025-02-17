@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
 import { LngLat } from "mapbox-gl";
 
-import { isNextResponse, unique } from "../utils";
+import { db } from "@/app/api/kysely";
+import { isNextResponse, unique } from "@/app/api/utils";
 
 interface MapboxResponse {
   batch: {
@@ -33,12 +34,42 @@ function generateCacheKey(latitude: number, longitude: number): string {
   return `${latitude},${longitude}`;
 }
 
+async function fetchGeolocationData(activityIds: number[]) {
+  return db
+    .selectFrom("activitymap.activities")
+    .select(["id", "country", "address"])
+    .where("id", "in", activityIds)
+    .where("country", "is not", null)
+    .where("address", "is not", null)
+    .execute();
+}
+
+async function stashGeolocationData(geocodedActivities: GeocodedActivities) {
+  return Promise.all(
+    Object.entries(geocodedActivities).map(async ([activityId, geocode]) => {
+      return db
+        .updateTable("activitymap.activities")
+        .set({ country: geocode.country, address: geocode.address })
+        .where("id", "=", +activityId)
+        .execute();
+    })
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const baseUrl = `https://api.mapbox.com/search/geocode/v6/batch?access_token=${MAPBOX_API_KEY}`;
     const activityInitialPositions: { [activityId: number]: LngLat } =
       await request.json();
     const geocodedActivities: GeocodedActivities = {};
+
+    const activityIds = Object.keys(activityInitialPositions).map(Number);
+    const databaseGeocodes = await fetchGeolocationData(activityIds);
+
+    databaseGeocodes.forEach(({ id, country, address }) => {
+      if (country && address) geocodedActivities[id] = { country, address };
+      delete activityInitialPositions[id];
+    });
 
     const uncachedActivities = await Promise.all(
       Object.entries(activityInitialPositions).map(
@@ -69,7 +100,7 @@ export async function POST(request: NextRequest) {
         };
       });
 
-    async function fetchGeolocationData() {
+    async function fetchMapboxGeolocationData() {
       if (geolocationQueries.length === 0) return [];
 
       const response = await fetch(baseUrl, {
@@ -89,7 +120,7 @@ export async function POST(request: NextRequest) {
       return result.batch;
     }
 
-    const mapboxResponse = await fetchGeolocationData();
+    const mapboxResponse = await fetchMapboxGeolocationData();
     if (isNextResponse(mapboxResponse)) return mapboxResponse;
 
     mapboxResponse.forEach(async (location, index) => {
@@ -120,6 +151,8 @@ export async function POST(request: NextRequest) {
         await redis.set(cacheKey, JSON.stringify(geocode));
       }
     });
+
+    stashGeolocationData(geocodedActivities);
 
     return NextResponse.json(geocodedActivities);
   } catch {

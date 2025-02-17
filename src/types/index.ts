@@ -1,8 +1,6 @@
 import { LngLat, LngLatBounds } from "mapbox-gl";
 
 export enum LocalStorageKey {
-  Athlete = "athlete",
-  Activities = "activities",
   Theme = "theme",
 }
 
@@ -63,9 +61,18 @@ export enum ActivityType {
 
 export interface RawAthelete {
   id: number;
+  username: string;
   firstname: string;
   lastname: string;
+  bio: string;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  sex: "M" | "F";
+  weight: number | null;
+  profile: string;
   profile_medium: string;
+  total_activity_count: number;
 }
 
 export interface Athlete {
@@ -73,17 +80,19 @@ export interface Athlete {
   firstName: string;
   lastName: string;
   imageUrl: string;
+  totalActivityCount: number;
 }
 
 export interface RawActivity {
   id: number;
+  athlete: { id: number };
   name: string;
   distance: number;
   moving_time: number;
-  elapsed_time: number;
   total_elevation_gain: number;
   sport_type: ActivityType;
   start_date: string;
+  timezone: string;
   average_speed: number;
   map: { summary_polyline: string };
 }
@@ -93,7 +102,6 @@ export interface Activity {
   name: string;
   distance: number;
   movingTime: number;
-  elapsedTime: number;
   totalElevationGain: number;
   averageSpeed: number;
   type: ActivityType;

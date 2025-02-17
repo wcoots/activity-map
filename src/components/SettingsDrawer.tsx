@@ -22,7 +22,7 @@ import {
   useMapStore,
   useUIStore,
 } from "@/store";
-import { Label, LocalStorageKey } from "@/types";
+import { Label } from "@/types";
 
 import styles from "./SettingsDrawer.module.css";
 
@@ -50,8 +50,6 @@ export default function SettingsDrawer({
 
   function logout() {
     window.location.href = "/api/auth/logout";
-    localStorage.removeItem(LocalStorageKey.Athlete);
-    localStorage.removeItem(LocalStorageKey.Activities);
   }
 
   const header = athlete ? (
