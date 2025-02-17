@@ -13,7 +13,7 @@ async function stashAthlete(athlete: RawAthelete) {
       username: athlete.username,
       forename: athlete.firstname,
       surname: athlete.lastname,
-      bio: athlete.bio.length > 0 ? athlete.bio : null,
+      bio: athlete.bio?.length ? athlete.bio : null,
       city: athlete.city,
       state: athlete.state,
       country: athlete.country,

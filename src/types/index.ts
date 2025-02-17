@@ -64,7 +64,7 @@ export interface RawAthelete {
   username: string;
   firstname: string;
   lastname: string;
-  bio: string;
+  bio: string | null;
   city: string | null;
   state: string | null;
   country: string | null;
