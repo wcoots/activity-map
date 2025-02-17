@@ -117,7 +117,7 @@ async function stashActivities(activities: RawActivity[]): Promise<void> {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    await new Promise((resolve) => setTimeout(resolve, 10000));
+    await new Promise((resolve) => setTimeout(resolve, 55000));
 
     const { athlete }: { athlete: Athlete } = await request.json();
 
