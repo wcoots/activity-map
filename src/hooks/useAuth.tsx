@@ -102,6 +102,11 @@ export function useAuth() {
               bounds,
               location: null,
             };
+          })
+          .sort((activityA, activityB) => {
+            return (
+              activityA.startDate.getTime() - activityB.startDate.getTime()
+            );
           });
 
         const geocodedActivities = await geocodeActivities(activities);
