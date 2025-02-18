@@ -3,6 +3,39 @@ import { getBaseUrl } from "../../utils";
 
 const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID!;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET!;
+const MAX_RETRIES = 5;
+
+async function fetchStravaToken(code: string, attempt = 1) {
+  try {
+    const response = await fetch("https://www.strava.com/oauth/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: STRAVA_CLIENT_ID,
+        client_secret: STRAVA_CLIENT_SECRET,
+        code,
+        grant_type: "authorization_code",
+      }),
+    });
+
+    if (!response.ok) {
+      if (attempt < MAX_RETRIES) {
+        const delay = Math.pow(2, attempt) * 100; // Exponential backoff
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return fetchStravaToken(code, attempt + 1);
+      }
+      throw new Error("Failed to fetch token");
+    }
+    return response.json();
+  } catch (error) {
+    if (attempt < MAX_RETRIES) {
+      const delay = Math.pow(2, attempt) * 100;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return fetchStravaToken(code, attempt + 1);
+    }
+    throw error;
+  }
+}
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -22,28 +55,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await fetch("https://www.strava.com/oauth/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: STRAVA_CLIENT_ID,
-        client_secret: STRAVA_CLIENT_SECRET,
-        code,
-        grant_type: "authorization_code",
-      }),
-    });
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: "Failed to fetch token" },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-
+    const data = await fetchStravaToken(code);
     const baseUrl = await getBaseUrl();
     const res = NextResponse.redirect(new URL("/", baseUrl));
+
     res.cookies.set("strava_access_token", data.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

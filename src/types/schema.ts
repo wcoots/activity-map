@@ -12,7 +12,7 @@ interface AthletesTable {
   city: string | null;
   state: string | null;
   country: string | null;
-  sex: "M" | "F";
+  sex: "M" | "F" | null;
   weight: number | null;
   profile: string;
   profile_medium: string;

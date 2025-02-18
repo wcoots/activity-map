@@ -6,12 +6,15 @@ import { themeConfig } from "@/configs";
 export function useTheme() {
   const { theme, setTheme } = useMapStore();
 
-  useEffect(() => {
-    const localTheme = localStorage.getItem(LocalStorageKey.Theme);
-    if (localTheme && Object.keys(themeConfig).includes(localTheme)) {
-      setTheme(localTheme as Theme);
-    }
-  }, [setTheme]);
+  useEffect(
+    function handleThemeChange() {
+      const localTheme = localStorage.getItem(LocalStorageKey.Theme);
+      if (localTheme && Object.keys(themeConfig).includes(localTheme)) {
+        setTheme(localTheme as Theme);
+      }
+    },
+    [setTheme]
+  );
 
   function toggleTheme() {
     const { toggle } = themeConfig[theme];

@@ -233,108 +233,119 @@ export function useMap() {
     map.current.fitBounds(selectedActivity.bounds, { padding });
   }
 
-  useEffect(() => {
-    // Map preparation useEffect. Called once on component mount.
-    if (map.current || !mapContainer.current) return;
+  useEffect(
+    function prepareMap() {
+      if (map.current || !mapContainer.current) return;
 
-    mapboxgl.accessToken = process.env.MAPBOX_API_KEY!;
+      mapboxgl.accessToken = process.env.MAPBOX_API_KEY!;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: themeConfig[theme].style,
-      center: [-4, 54.2],
-      zoom: 5,
-      attributionControl: false,
-    });
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: themeConfig[theme].style,
+        center: [-4, 54.2],
+        zoom: 5,
+        attributionControl: false,
+      });
 
-    map.current.on("load", () => {
-      if (!map.current) return;
+      map.current.on("load", () => {
+        if (!map.current) return;
 
-      map.current.dragRotate.disable();
-      map.current.touchZoomRotate.disableRotation();
-      map.current.touchPitch.disable();
+        map.current.dragRotate.disable();
+        map.current.touchZoomRotate.disableRotation();
+        map.current.touchPitch.disable();
 
-      createMapLayers();
+        createMapLayers();
 
-      map.current.on("mouseenter", INTERACTIVE_LAYERS, ({ features }) => {
-        if (map.current) map.current.getCanvas().style.cursor = "pointer";
-        if (features?.length) {
-          const [topFeature] = features;
-          setHoveredActivityId(topFeature.properties!.id);
+        map.current.on("mouseenter", INTERACTIVE_LAYERS, ({ features }) => {
+          if (map.current) map.current.getCanvas().style.cursor = "pointer";
+          if (features?.length) {
+            const [topFeature] = features;
+            setHoveredActivityId(topFeature.properties!.id);
+          }
+        });
+
+        map.current.on("mouseleave", INTERACTIVE_LAYERS, () => {
+          if (map.current) map.current.getCanvas().style.cursor = "";
+          setHoveredActivityId(null);
+        });
+
+        setMapLoading(false);
+      });
+    },
+    [theme, activities, setHoveredActivityId, createMapLayers, setMapLoading]
+  );
+
+  useEffect(
+    function initialBoundaryFitting() {
+      if (!activitiesLoading) fitBoundsOfActivities();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activitiesLoading]
+  );
+
+  useEffect(
+    function prepareActivities() {
+      if (!activities.length || !map.current || mapLoading) return;
+
+      const maxDistance = Math.ceil(
+        Math.max(...activities.map((activity) => activity.distance / 1000))
+      );
+
+      setMaximumDistance(maxDistance);
+      setHighestDistance(maxDistance);
+
+      map.current.on("click", (e) => {
+        if (!map.current) return;
+
+        const features = map.current.queryRenderedFeatures(e.point, {
+          layers: INTERACTIVE_LAYERS,
+        });
+
+        if (!features?.length) {
+          setSelectedActivityId(null);
+          return;
+        }
+
+        const [topFeature] = features;
+        if (topFeature.properties?.id) {
+          const activity = activities.find(
+            (activity) => activity.id === topFeature.properties!.id
+          );
+
+          if (activity) setSelectedActivityId(activity.id);
         }
       });
+    },
+    [
+      activities,
+      mapLoading,
+      setSelectedActivityId,
+      setHighestDistance,
+      setMaximumDistance,
+    ]
+  );
 
-      map.current.on("mouseleave", INTERACTIVE_LAYERS, () => {
-        if (map.current) map.current.getCanvas().style.cursor = "";
-        setHoveredActivityId(null);
-      });
+  useEffect(
+    function handleThemeChange() {
+      if (map.current) {
+        map.current.setStyle(themeConfig[theme].style);
 
-      setMapLoading(false);
-    });
-  }, [theme, activities, setHoveredActivityId, createMapLayers, setMapLoading]);
-
-  useEffect(() => {
-    if (!activitiesLoading) fitBoundsOfActivities();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activitiesLoading]);
-
-  useEffect(() => {
-    // Activities preparation useEffect. Called on activities load.
-    if (!activities.length || !map.current || mapLoading) return;
-
-    const maxDistance = Math.ceil(
-      Math.max(...activities.map((activity) => activity.distance / 1000))
-    );
-
-    setMaximumDistance(maxDistance);
-    setHighestDistance(maxDistance);
-
-    map.current.on("click", (e) => {
-      if (!map.current) return;
-
-      const features = map.current.queryRenderedFeatures(e.point, {
-        layers: INTERACTIVE_LAYERS,
-      });
-
-      if (!features?.length) {
-        setSelectedActivityId(null);
-        return;
+        map.current.once("style.load", () => {
+          createMapLayers();
+          populateSource();
+        });
       }
-
-      const [topFeature] = features;
-      if (topFeature.properties?.id) {
-        const activity = activities.find(
-          (activity) => activity.id === topFeature.properties!.id
-        );
-
-        if (activity) setSelectedActivityId(activity.id);
-      }
-    });
-  }, [
-    activities,
-    mapLoading,
-    setSelectedActivityId,
-    setHighestDistance,
-    setMaximumDistance,
-  ]);
-
-  useEffect(() => {
-    // Map theme useEffect. Called whenever theme changes.
-    if (map.current) {
-      map.current.setStyle(themeConfig[theme].style);
-
-      map.current.once("style.load", () => {
-        createMapLayers();
-        populateSource();
-      });
-    }
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, createMapLayers]);
+    [theme, createMapLayers]
+  );
 
-  useEffect(() => {
-    // Activities update useEffect. Called whenever activities or filters change.
-    populateSource();
-  }, [populateSource]);
+  useEffect(
+    function updateActivites() {
+      populateSource();
+    },
+    [populateSource]
+  );
 
   return {
     contextHolder,

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { message } from "antd";
 import { LngLat, LngLatBounds } from "mapbox-gl";
@@ -29,43 +29,23 @@ export function useAuth() {
     );
   }
 
-  useEffect(() => {
-    // Check authentication status and fetch athlete/activities if authenticated
-    async function checkAuth() {
-      try {
-        setAthleteLoading(true);
-        setActivitiesLoading(true);
+  const fetchAthlete = useCallback(async () => {
+    try {
+      const response = await fetch("/api/athlete");
+      if (!response.ok) return;
 
-        const response = await fetch("/api/auth/check");
-
-        if (response.status === 200) {
-          setIsAuthenticated(true);
-          const althete = await fetchAthlete();
-          if (althete) await fetchActivities(althete);
-        } else {
-          setIsAuthenticated(false);
-        }
-      } catch {
-        setIsAuthenticated(false);
-      }
+      const athlete: Athlete = await response.json();
+      setAthlete(athlete);
+      return athlete;
+    } catch (err) {
+      console.error("Error fetching athlete:", err);
+    } finally {
+      setAthleteLoading(false);
     }
+  }, [setAthlete, setAthleteLoading]);
 
-    async function fetchAthlete() {
-      try {
-        const response = await fetch("/api/athlete");
-        if (!response.ok) return;
-
-        const athlete: Athlete = await response.json();
-        setAthlete(athlete);
-        return athlete;
-      } catch (err) {
-        console.error("Error fetching athlete:", err);
-      } finally {
-        setAthleteLoading(false);
-      }
-    }
-
-    async function fetchActivities(athlete: Athlete) {
+  const fetchActivities = useCallback(
+    async (athlete: Athlete) => {
       try {
         const response = await fetch("/api/activities", {
           method: "POST",
@@ -118,53 +98,85 @@ export function useAuth() {
       } finally {
         setActivitiesLoading(false);
       }
-    }
+    },
+    [
+      setActivities,
+      setActivitiesLoading,
+      setFilteredActivityIds,
+      setCountries,
+      setLastRefreshed,
+    ]
+  );
 
-    async function geocodeActivities(activities: Activity[]) {
-      try {
-        const activityInitialPositions: { [activityId: number]: LngLat } = {};
-        activities.forEach((activity) => {
-          activityInitialPositions[activity.id] = activity.positions[0];
-        });
+  const checkAuth = useCallback(async () => {
+    // Check authentication status and fetch athlete/activities if authenticated
+    try {
+      setAthleteLoading(true);
+      setActivitiesLoading(true);
 
-        const response = await fetch("/api/geocoding", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(activityInitialPositions),
-        });
-        if (!response.ok) return [];
+      const response = await fetch("/api/auth/check");
 
-        const result: GeocodedActivities = await response.json();
-
-        return activities.map((activity) => ({
-          ...activity,
-          location: result[activity.id] ?? null,
-        }));
-      } catch (err) {
-        console.error("Error fetching geocodes:", err);
-        return [];
+      if (response.status === 200) {
+        setIsAuthenticated(true);
+        const althete = await fetchAthlete();
+        if (althete) await fetchActivities(althete);
+      } else {
+        setIsAuthenticated(false);
       }
+    } catch {
+      setIsAuthenticated(false);
     }
-
-    checkAuth();
   }, [
-    setAthlete,
-    setActivities,
-    setFilteredActivityIds,
-    setCountries,
-    setLastRefreshed,
-    setActivitiesLoading,
     setAthleteLoading,
+    setActivitiesLoading,
     setIsAuthenticated,
+    fetchAthlete,
+    fetchActivities,
   ]);
 
-  useEffect(() => {
-    // Show authentication error message if present in URL params
-    const errorParam = searchParams.get("error");
-    if (errorParam) {
-      messageApi.open({ type: "error", content: "Authentication Cancelled" });
+  async function geocodeActivities(activities: Activity[]) {
+    try {
+      const activityInitialPositions: { [activityId: number]: LngLat } = {};
+      activities.forEach((activity) => {
+        activityInitialPositions[activity.id] = activity.positions[0];
+      });
+
+      const response = await fetch("/api/geocoding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(activityInitialPositions),
+      });
+      if (!response.ok) return [];
+
+      const result: GeocodedActivities = await response.json();
+
+      return activities.map((activity) => ({
+        ...activity,
+        location: result[activity.id] ?? null,
+      }));
+    } catch (err) {
+      console.error("Error fetching geocodes:", err);
+      return [];
     }
-  }, [searchParams, messageApi]);
+  }
+
+  useEffect(
+    function checkAuthAndLoadData() {
+      checkAuth();
+    },
+    [checkAuth]
+  );
+
+  useEffect(
+    function handleAuthCancellation() {
+      const errorParam = searchParams.get("error");
+      if (errorParam) {
+        // Show authentication error message if present in URL params
+        messageApi.open({ type: "error", content: "Authentication Cancelled" });
+      }
+    },
+    [searchParams, messageApi]
+  );
 
   return { contextHolder };
 }
