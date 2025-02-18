@@ -135,7 +135,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const result = await fetchStravaActivities(accessToken, query);
 
       if (result.length) {
-        stashActivities(result); // don't call asynchronously so we can return the response as soon as possible
+        await stashActivities(result);
         activities.push(...result);
       }
 
@@ -157,7 +157,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     rows.forEach((result) => {
       if (!result.length) return;
-      stashActivities(result); // don't call asynchronously so we can return the response as soon as possible
       activities.push(...result);
       queryConfig.totalRows += result.length;
     });
@@ -168,11 +167,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const result = await fetchStravaActivities(accessToken, query);
       if (!result.length) break;
 
-      stashActivities(result); // don't call asynchronously so we can return the response as soon as possible
       activities.push(...result);
       queryConfig.totalRows += result.length;
       queryConfig.currentPage++;
     }
+
+    await stashActivities(activities);
 
     return NextResponse.json(activities);
   } catch {

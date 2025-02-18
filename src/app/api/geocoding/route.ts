@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    stashGeolocationData(geocodedActivities);
+    await stashGeolocationData(geocodedActivities);
 
     return NextResponse.json(geocodedActivities);
   } catch {
