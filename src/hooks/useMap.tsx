@@ -15,6 +15,8 @@ import { isMobile } from "@/utils";
 
 enum Sources {
   ActivitySource = "activity-source",
+  HoveredActivitySource = "hovered-activity-source",
+  SelectedActivitySource = "selected-activity-source",
 }
 
 enum Layers {
@@ -62,16 +64,26 @@ export function useMap() {
       });
     }
 
+    if (!map.current!.getSource(Sources.HoveredActivitySource)) {
+      map.current!.addSource(Sources.HoveredActivitySource, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+    }
+
+    if (!map.current!.getSource(Sources.SelectedActivitySource)) {
+      map.current!.addSource(Sources.SelectedActivitySource, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+    }
+
     if (!map.current.getLayer(Layers.InteractiveActivityLayer)) {
       map.current.addLayer({
         id: Layers.InteractiveActivityLayer,
         source: Sources.ActivitySource,
-        filter: ["==", ["get", "selected"], false],
         type: "line",
-        layout: {
-          "line-cap": "round",
-          "line-join": "round",
-        },
+        layout: { "line-cap": "round", "line-join": "round" },
         paint: {
           "line-color": "transparent",
           "line-width": 12,
@@ -83,16 +95,8 @@ export function useMap() {
       map.current.addLayer({
         id: Layers.ActivityLayer,
         source: Sources.ActivitySource,
-        filter: [
-          "all",
-          ["==", ["get", "selected"], false],
-          ["==", ["get", "hovered"], false],
-        ],
         type: "line",
-        layout: {
-          "line-cap": "round",
-          "line-join": "round",
-        },
+        layout: { "line-cap": "round", "line-join": "round" },
         paint: {
           "line-color": ["get", "colour"],
           "line-width": 3,
@@ -104,17 +108,9 @@ export function useMap() {
     if (!map.current.getLayer(Layers.HoveredActivityLayer)) {
       map.current.addLayer({
         id: Layers.HoveredActivityLayer,
-        source: Sources.ActivitySource,
-        filter: [
-          "all",
-          ["==", ["get", "selected"], false],
-          ["==", ["get", "hovered"], true],
-        ],
+        source: Sources.HoveredActivitySource,
         type: "line",
-        layout: {
-          "line-cap": "round",
-          "line-join": "round",
-        },
+        layout: { "line-cap": "round", "line-join": "round" },
         paint: {
           "line-color": ["get", "colour"],
           "line-width": 5,
@@ -126,13 +122,9 @@ export function useMap() {
     if (!map.current.getLayer(Layers.SelectedActivityLayer)) {
       map.current.addLayer({
         id: Layers.SelectedActivityLayer,
-        source: Sources.ActivitySource,
-        filter: ["==", ["get", "selected"], true],
+        source: Sources.SelectedActivitySource,
         type: "line",
-        layout: {
-          "line-cap": "round",
-          "line-join": "round",
-        },
+        layout: { "line-cap": "round", "line-join": "round" },
         paint: {
           "line-color": ["get", "colour"],
           "line-width": 7,
@@ -161,13 +153,7 @@ export function useMap() {
 
           const feature: Feature = {
             type: "Feature",
-            properties: {
-              id: activity.id,
-              colour,
-              borderColour,
-              hovered: activity.id === hoveredActivityId,
-              selected: activity.id === selectedActivityId,
-            },
+            properties: { id: activity.id, colour, borderColour },
             geometry: {
               type: "LineString",
               coordinates: activity.positions.map((pos) => [pos.lng, pos.lat]),
@@ -183,13 +169,47 @@ export function useMap() {
     map.current
       ?.getSource<GeoJSONSource>(Sources.ActivitySource)
       ?.setData(activityFeatureCollection);
-  }, [
-    theme,
-    activities,
-    filterActivities,
-    hoveredActivityId,
-    selectedActivityId,
-  ]);
+  }, [theme, activities, filterActivities]);
+
+  const populateHighlightedSource = useCallback(
+    (source: GeoJSONSource, activityId: number | null) => {
+      if (!source) return;
+
+      const featureCollection: FeatureCollection = {
+        type: "FeatureCollection",
+        features: [],
+      };
+
+      const activity = activities.find(
+        (activity) => activity.id === activityId
+      );
+
+      if (!activity) return source.setData(featureCollection);
+
+      const configItem = activitiesConfig.find((config) =>
+        config.activityTypes.includes(activity.type)
+      );
+
+      if (!configItem) return source.setData(featureCollection);
+
+      const colour = configItem.colour[theme];
+      const borderColour = themeConfig[theme].borderColour;
+
+      const feature: Feature = {
+        type: "Feature",
+        properties: { id: activity.id, colour, borderColour },
+        geometry: {
+          type: "LineString",
+          coordinates: activity.positions.map((pos) => [pos.lng, pos.lat]),
+        },
+      };
+
+      featureCollection.features.push(feature);
+
+      source.setData(featureCollection);
+    },
+    [theme, activities]
+  );
 
   function fitBoundsOfActivities(initialFit = false) {
     if (!map.current) return;
@@ -278,7 +298,7 @@ export function useMap() {
 
         createMapLayers();
 
-        map.current.on("mouseenter", INTERACTIVE_LAYERS, ({ features }) => {
+        map.current.on("mousemove", INTERACTIVE_LAYERS, ({ features }) => {
           if (map.current) map.current.getCanvas().style.cursor = "pointer";
           if (features?.length) {
             const [topFeature] = features;
@@ -334,13 +354,17 @@ export function useMap() {
             (activity) => activity.id === topFeature.properties!.id
           );
 
-          if (activity) setSelectedActivityId(activity.id);
+          if (activity) {
+            setHoveredActivityId(null);
+            setSelectedActivityId(activity.id);
+          }
         }
       });
     },
     [
       activities,
       mapLoading,
+      setHoveredActivityId,
       setSelectedActivityId,
       setHighestDistance,
       setMaximumDistance,
@@ -353,6 +377,8 @@ export function useMap() {
         map.current.setStyle(themeConfig[theme].style);
 
         map.current.once("style.load", () => {
+          setHoveredActivityId(null);
+          setSelectedActivityId(null);
           createMapLayers();
           populateSource();
         });
@@ -367,6 +393,32 @@ export function useMap() {
       populateSource();
     },
     [populateSource]
+  );
+
+  useEffect(
+    function updateHoveredActivity() {
+      const source = map.current?.getSource<GeoJSONSource>(
+        Sources.HoveredActivitySource
+      );
+
+      if (!source) return;
+
+      populateHighlightedSource(source, hoveredActivityId);
+    },
+    [populateHighlightedSource, hoveredActivityId]
+  );
+
+  useEffect(
+    function updateSelectedActivity() {
+      const source = map.current?.getSource<GeoJSONSource>(
+        Sources.SelectedActivitySource
+      );
+
+      if (!source) return;
+
+      populateHighlightedSource(source, selectedActivityId);
+    },
+    [populateHighlightedSource, selectedActivityId]
   );
 
   return {
