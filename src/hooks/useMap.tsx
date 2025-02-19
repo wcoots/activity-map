@@ -37,6 +37,7 @@ export function useMap() {
 
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<Map | null>(null);
+  const europeBounds = new LngLatBounds([-10, 38], [25, 58]);
 
   const {
     activitiesLoading,
@@ -190,7 +191,7 @@ export function useMap() {
     selectedActivityId,
   ]);
 
-  function fitBoundsOfActivities() {
+  function fitBoundsOfActivities(initialFit = false) {
     if (!map.current) return;
 
     const filteredActivities = activities.filter((activity) =>
@@ -209,10 +210,31 @@ export function useMap() {
       activity.bounds.getSouthWest().lat,
     ]);
 
+    const maxLongitude = Math.max(...longitudes);
+    const minLongitude = Math.min(...longitudes);
+    const maxLatitude = Math.max(...latitudes);
+    const minLatitude = Math.min(...latitudes);
+
     const bounds = new LngLatBounds(
-      [Math.max(...longitudes), Math.max(...latitudes)],
-      [Math.min(...longitudes), Math.min(...latitudes)]
+      [maxLongitude, maxLatitude],
+      [minLongitude, minLatitude]
     );
+
+    if (initialFit) {
+      if (
+        maxLatitude > europeBounds.getNorth() ||
+        maxLongitude > europeBounds.getEast()
+      ) {
+        bounds.setNorthEast(europeBounds.getNorthEast());
+      }
+
+      if (
+        minLatitude < europeBounds.getSouth() ||
+        minLongitude < europeBounds.getWest()
+      ) {
+        bounds.setSouthWest(europeBounds.getSouthWest());
+      }
+    }
 
     map.current.fitBounds(bounds, { padding: 50 });
   }
@@ -277,7 +299,7 @@ export function useMap() {
 
   useEffect(
     function initialBoundaryFitting() {
-      if (!activitiesLoading) fitBoundsOfActivities();
+      if (!activitiesLoading) fitBoundsOfActivities(true);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [activitiesLoading]
