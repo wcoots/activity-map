@@ -1,5 +1,6 @@
 import { LngLat } from "mapbox-gl";
 import polyline from "@mapbox/polyline";
+import { Feature, FeatureCollection } from "geojson";
 
 export function formatSeconds(seconds: number) {
   const hours = Math.floor(seconds / 3600);
@@ -46,4 +47,10 @@ export function unique<T>(array: T[]): T[] {
     seen.add(item);
     return true;
   });
+}
+
+export function createFeatureCollection(
+  features: Feature[]
+): FeatureCollection {
+  return { type: "FeatureCollection", features };
 }

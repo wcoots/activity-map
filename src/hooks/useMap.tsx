@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef } from "react";
-import { Feature, FeatureCollection } from "geojson";
+import { Feature } from "geojson";
 import mapboxgl, {
   GeoJSONSource,
   LngLatBounds,
@@ -11,7 +11,7 @@ import mapboxgl, {
 import { activitiesConfig, themeConfig } from "@/configs";
 import { useActivities, useAuth } from "@/hooks";
 import { useActivityStore, useMapStore } from "@/store";
-import { isMobile } from "@/utils";
+import { isMobile, createFeatureCollection } from "@/utils";
 
 enum Sources {
   ActivitySource = "activity-source",
@@ -60,21 +60,21 @@ export function useMap() {
     if (!map.current!.getSource(Sources.ActivitySource)) {
       map.current!.addSource(Sources.ActivitySource, {
         type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
+        data: createFeatureCollection([]),
       });
     }
 
     if (!map.current!.getSource(Sources.HoveredActivitySource)) {
       map.current!.addSource(Sources.HoveredActivitySource, {
         type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
+        data: createFeatureCollection([]),
       });
     }
 
     if (!map.current!.getSource(Sources.SelectedActivitySource)) {
       map.current!.addSource(Sources.SelectedActivitySource, {
         type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
+        data: createFeatureCollection([]),
       });
     }
 
@@ -135,36 +135,35 @@ export function useMap() {
     }
   }, []);
 
-  const populateSource = useCallback(() => {
-    const activityFeatureCollection: FeatureCollection = {
-      type: "FeatureCollection",
-      features: filterActivities(activities).reduce(
-        (acc: Feature[], activity) => {
-          const configItem = activitiesConfig.find((config) =>
-            config.activityTypes.includes(activity.type)
-          );
+  const populateActivitySource = useCallback(() => {
+    const features = filterActivities(activities).reduce(
+      (acc: Feature[], activity) => {
+        const configItem = activitiesConfig.find((config) =>
+          config.activityTypes.includes(activity.type)
+        );
 
-          if (!configItem) return acc;
+        if (!configItem) return acc;
 
-          const colour = configItem.colour[theme];
-          const borderColour = themeConfig[theme].borderColour;
+        const colour = configItem.colour[theme];
+        const borderColour = themeConfig[theme].borderColour;
 
-          if (!colour) return acc;
+        if (!colour) return acc;
 
-          const feature: Feature = {
-            type: "Feature",
-            properties: { id: activity.id, colour, borderColour },
-            geometry: {
-              type: "LineString",
-              coordinates: activity.positions.map((pos) => [pos.lng, pos.lat]),
-            },
-          };
+        const feature: Feature = {
+          type: "Feature",
+          properties: { id: activity.id, colour, borderColour },
+          geometry: {
+            type: "LineString",
+            coordinates: activity.positions.map((pos) => [pos.lng, pos.lat]),
+          },
+        };
 
-          return [...acc, feature];
-        },
-        []
-      ),
-    };
+        return [...acc, feature];
+      },
+      []
+    );
+
+    const activityFeatureCollection = createFeatureCollection(features);
 
     map.current
       ?.getSource<GeoJSONSource>(Sources.ActivitySource)
@@ -175,10 +174,7 @@ export function useMap() {
     (source: GeoJSONSource, activityId: number | null) => {
       if (!source) return;
 
-      const featureCollection: FeatureCollection = {
-        type: "FeatureCollection",
-        features: [],
-      };
+      const featureCollection = createFeatureCollection([]);
 
       const activity = activities.find(
         (activity) => activity.id === activityId
@@ -380,7 +376,7 @@ export function useMap() {
           setHoveredActivityId(null);
           setSelectedActivityId(null);
           createMapLayers();
-          populateSource();
+          populateActivitySource();
         });
       }
     },
@@ -390,9 +386,9 @@ export function useMap() {
 
   useEffect(
     function updateActivites() {
-      populateSource();
+      populateActivitySource();
     },
-    [populateSource]
+    [populateActivitySource]
   );
 
   useEffect(

@@ -6,17 +6,16 @@ import { LngLat } from "mapbox-gl";
 import { db } from "@/app/api/kysely";
 import { unique } from "@/app/api/utils";
 
+import { Feature, Point } from "geojson";
+
+interface MapboxPointProperties {
+  feature_type: "country" | "region" | "district";
+  name: string;
+  full_address: string;
+}
+
 interface MapboxResponse {
-  batch: {
-    features: {
-      type: "Feature";
-      properties: {
-        feature_type: "country" | "region" | "district";
-        name: string;
-        full_address: string;
-      };
-    }[];
-  }[];
+  batch: { features: Feature<Point, MapboxPointProperties>[] }[];
 }
 
 interface GeolocationQuery {
@@ -170,7 +169,9 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    await stashGeolocationData(geocodedActivities);
+    const geocodesToStash = { ...geocodedActivities };
+    databaseGeocodes.forEach(({ id }) => delete geocodesToStash[id]);
+    await stashGeolocationData(geocodesToStash);
 
     return NextResponse.json(geocodedActivities);
   } catch {
