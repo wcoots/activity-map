@@ -29,6 +29,8 @@ export default function Home() {
     mapContainer,
     fitBoundsOfSelectedActivity,
     fitBoundsOfActivities,
+    getPreviousActivityId,
+    getNextActivityId,
   } = useMap();
 
   const { activitiesLoading } = useActivityStore();
@@ -111,6 +113,8 @@ export default function Home() {
 
           <SelectedActivityCard
             fitBoundsOfSelectedActivity={fitBoundsOfSelectedActivity}
+            getPreviousActivityId={getPreviousActivityId}
+            getNextActivityId={getNextActivityId}
           />
         </>
       )}

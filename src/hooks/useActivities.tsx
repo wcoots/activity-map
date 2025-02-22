@@ -13,6 +13,7 @@ export function useActivities() {
     keywordText,
     year,
     selectedCountry,
+    filteredActivityIds,
     setFilteredActivityIds,
     setSelectedActivityId,
   } = useActivityStore();
@@ -73,5 +74,19 @@ export function useActivities() {
     ]
   );
 
-  return { filterActivities };
+  function getNextActivityId() {
+    if (!selectedActivityId) return null;
+
+    const index = filteredActivityIds.indexOf(selectedActivityId);
+    return filteredActivityIds[index + 1] || null;
+  }
+
+  function getPreviousActivityId() {
+    if (!selectedActivityId) return null;
+
+    const index = filteredActivityIds.indexOf(selectedActivityId);
+    return filteredActivityIds[index - 1] || null;
+  }
+
+  return { filterActivities, getNextActivityId, getPreviousActivityId };
 }

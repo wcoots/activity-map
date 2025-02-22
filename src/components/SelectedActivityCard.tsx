@@ -4,7 +4,11 @@ import dayjs from "dayjs";
 import classNames from "classnames";
 
 import "@ant-design/v5-patch-for-react-19";
-import { EyeFilled } from "@ant-design/icons";
+import {
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  EyeFilled,
+} from "@ant-design/icons";
 import { Button, Card } from "antd";
 
 import { useActivityStore } from "@/store";
@@ -14,10 +18,15 @@ import styles from "./SelectedActivityCard.module.css";
 
 export default function SelectedActivityCard({
   fitBoundsOfSelectedActivity,
+  getPreviousActivityId,
+  getNextActivityId,
 }: {
-  fitBoundsOfSelectedActivity(): void;
+  fitBoundsOfSelectedActivity(activityId?: number): void;
+  getPreviousActivityId(): number | null;
+  getNextActivityId(): number | null;
 }) {
-  const { selectedActivityId, activities } = useActivityStore();
+  const { selectedActivityId, activities, filteredActivityIds } =
+    useActivityStore();
 
   if (!selectedActivityId) return null;
 
@@ -33,7 +42,7 @@ export default function SelectedActivityCard({
   const header = (
     <div className={styles.header}>
       <div>
-        {selectedActivity.name}
+        <div className={styles.title}>{selectedActivity.name}</div>
         {location && (
           <div
             className={classNames(styles.subtitle, {
@@ -51,31 +60,73 @@ export default function SelectedActivityCard({
         variant="outlined"
         size="middle"
         icon={<EyeFilled />}
-        onClick={fitBoundsOfSelectedActivity}
+        onClick={() => fitBoundsOfSelectedActivity()}
       />
     </div>
   );
 
   return (
-    <Card
+    <div
       className={classNames({
-        [styles.activityCard]: !isMobile(),
-        [styles.activityCardMobile]: isMobile(),
+        [styles.container]: !isMobile(),
+        [styles.containerMobile]: isMobile(),
       })}
-      title={header}
     >
-      <strong>Type:</strong> {selectedActivity.type}
-      <br />
-      <strong>Distance:</strong>{" "}
-      {+(selectedActivity.distance / 1000).toFixed(2)}km
-      <br />
-      <strong>Moving Time:</strong> {formatSeconds(selectedActivity.movingTime)}
-      <br />
-      <strong>Average Pace:</strong>{" "}
-      {convertSpeedToPace(selectedActivity.averageSpeed)}
-      <br />
-      <strong>Elevation Gain:</strong>{" "}
-      {Math.floor(selectedActivity.totalElevationGain)}m
-    </Card>
+      <Card
+        className={classNames({
+          [styles.activityCard]: !isMobile(),
+          [styles.activityCardMobile]: isMobile(),
+        })}
+        title={header}
+      >
+        <strong>Type: </strong>
+        {selectedActivity.type}
+        <br />
+        <strong>Distance: </strong>
+        {+(selectedActivity.distance / 1000).toFixed(2)}km
+        <br />
+        <strong>Moving Time: </strong>
+        {formatSeconds(selectedActivity.movingTime)}
+        <br />
+        <strong>Average Pace: </strong>
+        {convertSpeedToPace(selectedActivity.averageSpeed)}
+        <br />
+        <strong>Elevation Gain: </strong>
+        {Math.floor(selectedActivity.totalElevationGain)}m
+        <div className={styles.activityButtons}>
+          <Button
+            type="primary"
+            color="default"
+            variant="outlined"
+            size="middle"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => {
+              const previousActivityId = getPreviousActivityId();
+              if (previousActivityId) {
+                fitBoundsOfSelectedActivity(previousActivityId);
+              }
+            }}
+            disabled={filteredActivityIds[0] === selectedActivityId}
+          />
+          <Button
+            type="primary"
+            color="default"
+            variant="outlined"
+            size="middle"
+            icon={<ArrowRightOutlined />}
+            onClick={() => {
+              const nextActivityId = getNextActivityId();
+              if (nextActivityId) {
+                fitBoundsOfSelectedActivity(nextActivityId);
+              }
+            }}
+            disabled={
+              filteredActivityIds[filteredActivityIds.length - 1] ===
+              selectedActivityId
+            }
+          />
+        </div>
+      </Card>
+    </div>
   );
 }

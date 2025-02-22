@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { Feature } from "geojson";
 import mapboxgl, {
   GeoJSONSource,
+  LineLayerSpecification,
   LngLatBounds,
   Map,
   PaddingOptions,
@@ -13,13 +14,13 @@ import { useActivities, useAuth } from "@/hooks";
 import { useActivityStore, useMapStore } from "@/store";
 import { isMobile, createFeatureCollection } from "@/utils";
 
-enum Sources {
+enum SourceIds {
   ActivitySource = "activity-source",
   HoveredActivitySource = "hovered-activity-source",
   SelectedActivitySource = "selected-activity-source",
 }
 
-enum Layers {
+enum LayerIds {
   ActivityLayer = "activity-layer",
   InteractiveActivityLayer = "interactive-activity-layer",
   HoveredActivityLayer = "hovered-activity-layer",
@@ -27,14 +28,15 @@ enum Layers {
 }
 
 const INTERACTIVE_LAYERS = [
-  Layers.ActivityLayer,
-  Layers.InteractiveActivityLayer,
-  Layers.HoveredActivityLayer,
-  Layers.SelectedActivityLayer,
+  LayerIds.ActivityLayer,
+  LayerIds.InteractiveActivityLayer,
+  LayerIds.HoveredActivityLayer,
+  LayerIds.SelectedActivityLayer,
 ];
 
 export function useMap() {
-  const { filterActivities } = useActivities();
+  const { filterActivities, getNextActivityId, getPreviousActivityId } =
+    useActivities();
   const { contextHolder } = useAuth();
 
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -54,85 +56,64 @@ export function useMap() {
   } = useActivityStore();
   const { mapLoading, theme, setMapLoading } = useMapStore();
 
+  function initialiseSource(sourceId: SourceIds) {
+    if (map.current && !map.current.getSource(sourceId)) {
+      const data = createFeatureCollection([]);
+      map.current.addSource(sourceId, { type: "geojson", data });
+    }
+  }
+
+  function initialiseLineLayer(
+    layerId: LayerIds,
+    sourceId: SourceIds,
+    paint: LineLayerSpecification["paint"]
+  ) {
+    if (map.current && !map.current.getLayer(layerId)) {
+      map.current.addLayer({
+        id: layerId,
+        source: sourceId,
+        type: "line",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint,
+      });
+    }
+  }
+
   const createMapLayers = useCallback(() => {
     if (!map.current) return;
 
-    if (!map.current!.getSource(Sources.ActivitySource)) {
-      map.current!.addSource(Sources.ActivitySource, {
-        type: "geojson",
-        data: createFeatureCollection([]),
-      });
-    }
+    initialiseSource(SourceIds.ActivitySource);
+    initialiseSource(SourceIds.HoveredActivitySource);
+    initialiseSource(SourceIds.SelectedActivitySource);
 
-    if (!map.current!.getSource(Sources.HoveredActivitySource)) {
-      map.current!.addSource(Sources.HoveredActivitySource, {
-        type: "geojson",
-        data: createFeatureCollection([]),
-      });
-    }
+    initialiseLineLayer(
+      LayerIds.InteractiveActivityLayer,
+      SourceIds.ActivitySource,
+      { "line-color": "transparent", "line-width": 12 }
+    );
 
-    if (!map.current!.getSource(Sources.SelectedActivitySource)) {
-      map.current!.addSource(Sources.SelectedActivitySource, {
-        type: "geojson",
-        data: createFeatureCollection([]),
-      });
-    }
+    initialiseLineLayer(LayerIds.ActivityLayer, SourceIds.ActivitySource, {
+      "line-color": ["get", "colour"],
+      "line-width": 3,
+      "line-blur": 2,
+    });
 
-    if (!map.current.getLayer(Layers.InteractiveActivityLayer)) {
-      map.current.addLayer({
-        id: Layers.InteractiveActivityLayer,
-        source: Sources.ActivitySource,
-        type: "line",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": "transparent",
-          "line-width": 12,
-        },
-      });
-    }
+    initialiseLineLayer(
+      LayerIds.HoveredActivityLayer,
+      SourceIds.HoveredActivitySource,
+      { "line-color": ["get", "colour"], "line-width": 5, "line-blur": 2 }
+    );
 
-    if (!map.current.getLayer(Layers.ActivityLayer)) {
-      map.current.addLayer({
-        id: Layers.ActivityLayer,
-        source: Sources.ActivitySource,
-        type: "line",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": ["get", "colour"],
-          "line-width": 3,
-          "line-blur": 2,
-        },
-      });
-    }
-
-    if (!map.current.getLayer(Layers.HoveredActivityLayer)) {
-      map.current.addLayer({
-        id: Layers.HoveredActivityLayer,
-        source: Sources.HoveredActivitySource,
-        type: "line",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": ["get", "colour"],
-          "line-width": 5,
-          "line-blur": 2,
-        },
-      });
-    }
-
-    if (!map.current.getLayer(Layers.SelectedActivityLayer)) {
-      map.current.addLayer({
-        id: Layers.SelectedActivityLayer,
-        source: Sources.SelectedActivitySource,
-        type: "line",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": ["get", "colour"],
-          "line-width": 7,
-          "line-border-color": ["get", "borderColour"],
-          "line-border-width": 2,
-        },
-      });
-    }
+    initialiseLineLayer(
+      LayerIds.SelectedActivityLayer,
+      SourceIds.SelectedActivitySource,
+      {
+        "line-color": ["get", "colour"],
+        "line-width": 7,
+        "line-border-color": ["get", "borderColour"],
+        "line-border-width": 2,
+      }
+    );
   }, []);
 
   const populateActivitySource = useCallback(() => {
@@ -166,7 +147,7 @@ export function useMap() {
     const activityFeatureCollection = createFeatureCollection(features);
 
     map.current
-      ?.getSource<GeoJSONSource>(Sources.ActivitySource)
+      ?.getSource<GeoJSONSource>(SourceIds.ActivitySource)
       ?.setData(activityFeatureCollection);
   }, [theme, activities, filterActivities]);
 
@@ -255,11 +236,13 @@ export function useMap() {
     map.current.fitBounds(bounds, { padding: 50 });
   }
 
-  function fitBoundsOfSelectedActivity() {
-    if (!map.current || !selectedActivityId) return;
+  function fitBoundsOfSelectedActivity(activityId?: number) {
+    if (!map.current || !selectedActivityId || !activityId) return;
+
+    if (activityId) setSelectedActivityId(activityId);
 
     const selectedActivity = activities.find(
-      (activity) => activity.id === selectedActivityId
+      (activity) => activity.id === (activityId ?? selectedActivityId)
     );
 
     if (!selectedActivity) return;
@@ -394,7 +377,7 @@ export function useMap() {
   useEffect(
     function updateHoveredActivity() {
       const source = map.current?.getSource<GeoJSONSource>(
-        Sources.HoveredActivitySource
+        SourceIds.HoveredActivitySource
       );
 
       if (!source) return;
@@ -407,7 +390,7 @@ export function useMap() {
   useEffect(
     function updateSelectedActivity() {
       const source = map.current?.getSource<GeoJSONSource>(
-        Sources.SelectedActivitySource
+        SourceIds.SelectedActivitySource
       );
 
       if (!source) return;
@@ -422,5 +405,7 @@ export function useMap() {
     mapContainer,
     fitBoundsOfSelectedActivity,
     fitBoundsOfActivities,
+    getNextActivityId,
+    getPreviousActivityId,
   };
 }

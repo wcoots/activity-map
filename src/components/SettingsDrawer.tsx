@@ -33,6 +33,7 @@ export default function SettingsDrawer({
 }) {
   const { athlete } = useAuthStore();
   const {
+    selectedActivityId,
     activityTypeSettings,
     highestDistance,
     keywordText,
@@ -95,7 +96,7 @@ export default function SettingsDrawer({
       open={settingsOpen}
       onClose={() => {
         setSettingsOpen(false);
-        fitBoundsOfActivities();
+        if (!selectedActivityId) fitBoundsOfActivities();
       }}
     >
       <h3>Activity Types</h3>

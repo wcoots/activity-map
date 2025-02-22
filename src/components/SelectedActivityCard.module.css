@@ -1,13 +1,20 @@
-.activityCard {
+.container {
   position: absolute;
   bottom: 20px;
   left: 20px;
 }
 
-.activityCardMobile {
+.containerMobile {
   position: absolute;
   bottom: -5px;
   left: 0px;
+}
+
+.activityCard {
+  width: 350px;
+}
+
+.activityCardMobile {
   width: 100svw;
 }
 
@@ -19,6 +26,12 @@
   justify-content: space-between;
 }
 
+.title {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  width: calc(100svw - 100px);
+}
+
 .subtitle {
   font-size: 0.7em;
   color: #666;
@@ -28,4 +41,12 @@
   width: calc(100svw - 100px);
   white-space: normal;
   word-break: break-word;
+}
+
+.activityButtons {
+  display: flex;
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  gap: 12px;
 }
