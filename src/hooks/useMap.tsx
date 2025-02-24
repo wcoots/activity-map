@@ -66,7 +66,7 @@ export function useMap() {
   function initialiseLineLayer(
     layerId: LayerIds,
     sourceId: SourceIds,
-    paint: LineLayerSpecification["paint"]
+    paint: LineLayerSpecification["paint"] = {}
   ) {
     if (map.current && !map.current.getLayer(layerId)) {
       map.current.addLayer({
@@ -74,7 +74,14 @@ export function useMap() {
         source: sourceId,
         type: "line",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint,
+        paint: {
+          ...paint,
+          "line-width": [
+            "*",
+            paint["line-width"] ?? 3, // Use the provided width or default to 3
+            ["case", ["boolean", ["feature-state", "shown"], true], 1, 0], // Width of 0 if not shown
+          ],
+        },
       });
     }
   }
@@ -116,40 +123,51 @@ export function useMap() {
     );
   }, []);
 
+  const filterSourceActivities = useCallback(() => {
+    const filteredActivities = filterActivities(activities);
+
+    activities.forEach((activity) => {
+      const shown = !!filteredActivities.find(({ id }) => id === activity.id);
+
+      map.current?.setFeatureState(
+        { source: SourceIds.ActivitySource, id: activity.id },
+        { shown }
+      );
+    });
+  }, [activities, filterActivities]);
+
   const populateActivitySource = useCallback(() => {
-    const features = filterActivities(activities).reduce(
-      (acc: Feature[], activity) => {
-        const configItem = activitiesConfig.find((config) =>
-          config.activityTypes.includes(activity.type)
-        );
+    const features = activities.reduce((acc: Feature[], activity) => {
+      const configItem = activitiesConfig.find((config) =>
+        config.activityTypes.includes(activity.type)
+      );
 
-        if (!configItem) return acc;
+      if (!configItem) return acc;
 
-        const colour = configItem.colour[theme];
-        const borderColour = themeConfig[theme].borderColour;
+      const colour = configItem.colour[theme];
+      const borderColour = themeConfig[theme].borderColour;
 
-        if (!colour) return acc;
+      if (!colour) return acc;
 
-        const feature: Feature = {
-          type: "Feature",
-          properties: { id: activity.id, colour, borderColour },
-          geometry: {
-            type: "LineString",
-            coordinates: activity.positions.map((pos) => [pos.lng, pos.lat]),
-          },
-        };
+      const feature: Feature = {
+        type: "Feature",
+        id: activity.id,
+        properties: { id: activity.id, colour, borderColour },
+        geometry: {
+          type: "LineString",
+          coordinates: activity.positions.map((pos) => [pos.lng, pos.lat]),
+        },
+      };
 
-        return [...acc, feature];
-      },
-      []
-    );
+      return [...acc, feature];
+    }, []);
 
     const activityFeatureCollection = createFeatureCollection(features);
 
     map.current
       ?.getSource<GeoJSONSource>(SourceIds.ActivitySource)
       ?.setData(activityFeatureCollection);
-  }, [theme, activities, filterActivities]);
+  }, [theme, activities]);
 
   const populateHighlightedSource = useCallback(
     (source: GeoJSONSource, activityId: number | null) => {
@@ -162,6 +180,13 @@ export function useMap() {
       );
 
       if (!activity) return source.setData(featureCollection);
+
+      const featureState = map.current?.getFeatureState({
+        source: SourceIds.ActivitySource,
+        id: activity.id,
+      });
+
+      if (!featureState?.shown) return source.setData(featureCollection);
 
       const configItem = activitiesConfig.find((config) =>
         config.activityTypes.includes(activity.type)
@@ -360,6 +385,7 @@ export function useMap() {
           setSelectedActivityId(null);
           createMapLayers();
           populateActivitySource();
+          filterSourceActivities();
         });
       }
     },
@@ -368,10 +394,17 @@ export function useMap() {
   );
 
   useEffect(
-    function updateActivites() {
+    function initialiseActivites() {
       populateActivitySource();
     },
     [populateActivitySource]
+  );
+
+  useEffect(
+    function updateActivites() {
+      filterSourceActivities();
+    },
+    [filterSourceActivities]
   );
 
   useEffect(
