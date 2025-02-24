@@ -42,7 +42,13 @@ export default function SelectedActivityCard({
   const header = (
     <div className={styles.header}>
       <div>
-        <div className={styles.title}>{selectedActivity.name}</div>
+        <div
+          className={classNames(styles.title, {
+            [styles.titleMobile]: isMobile(),
+          })}
+        >
+          {selectedActivity.name}
+        </div>
         {location && (
           <div
             className={classNames(styles.subtitle, {

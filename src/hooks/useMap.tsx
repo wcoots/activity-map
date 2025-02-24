@@ -262,7 +262,7 @@ export function useMap() {
   }
 
   function fitBoundsOfSelectedActivity(activityId?: number) {
-    if (!map.current || !selectedActivityId || !activityId) return;
+    if (!map.current || (!selectedActivityId && !activityId)) return;
 
     if (activityId) setSelectedActivityId(activityId);
 

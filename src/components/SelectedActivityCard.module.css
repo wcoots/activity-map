@@ -29,6 +29,9 @@
 .title {
   text-overflow: ellipsis;
   overflow: hidden;
+}
+
+.titleMobile {
   width: calc(100svw - 100px);
 }
 
