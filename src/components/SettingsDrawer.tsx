@@ -101,33 +101,36 @@ export default function SettingsDrawer({
     >
       <h3>Activity Types</h3>
       <div className={styles.checkboxes}>
-        {Object.entries(activityTypeSettings).map(([label, visible]) => (
-          <div key={label}>
-            <Checkbox
-              key={label}
-              checked={visible}
-              onChange={(event) => {
-                setActivityTypeSettings({
-                  ...activityTypeSettings,
-                  [label]: event.target.checked,
-                });
-              }}
-            >
-              {label}
-            </Checkbox>
+        {Object.entries(activityTypeSettings).map(([label, visible]) => {
+          if (visible === null) return null;
+          return (
+            <div key={label}>
+              <Checkbox
+                key={label}
+                checked={visible}
+                onChange={(event) => {
+                  setActivityTypeSettings({
+                    ...activityTypeSettings,
+                    [label]: event.target.checked,
+                  });
+                }}
+              >
+                {label}
+              </Checkbox>
 
-            <ColourPicker
-              className={styles.colourPicker}
-              value={
-                activitiesConfig.find(
-                  (config) => config.label === (label as Label)
-                )?.colour[theme]
-              }
-              open={false}
-              size="small"
-            />
-          </div>
-        ))}
+              <ColourPicker
+                className={styles.colourPicker}
+                value={
+                  activitiesConfig.find(
+                    (config) => config.label === (label as Label)
+                  )?.colour[theme]
+                }
+                open={false}
+                size="small"
+              />
+            </div>
+          );
+        })}
       </div>
 
       <Divider />

@@ -8,7 +8,7 @@ interface ActivityState {
   filteredActivityIds: number[];
   hoveredActivityId: number | null;
   selectedActivityId: number | null;
-  activityTypeSettings: Record<Label, boolean>;
+  activityTypeSettings: Record<Label, boolean | null>;
   minimumDistance: number;
   maximumDistance: number;
   highestDistance: number;
@@ -23,7 +23,7 @@ interface ActivityState {
   setHoveredActivityId: (id: number | null) => void;
   setSelectedActivityId: (id: number | null) => void;
   setActivityTypeSettings: (
-    activityTypeSettings: Record<Label, boolean>
+    activityTypeSettings: Record<Label, boolean | null>
   ) => void;
   setMinimumDistance: (distance: number) => void;
   setMaximumDistance: (distance: number) => void;

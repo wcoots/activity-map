@@ -4,9 +4,16 @@ import { useSearchParams } from "next/navigation";
 import { message } from "antd";
 import { LngLat, LngLatBounds } from "mapbox-gl";
 
+import { activitiesConfig } from "@/configs";
 import { useAuthStore, useActivityStore } from "@/store";
 import { decodePolyline, unique } from "@/utils";
-import { Athlete, RawActivity, Activity, GeocodedActivities } from "@/types";
+import {
+  Athlete,
+  RawActivity,
+  Activity,
+  GeocodedActivities,
+  Label,
+} from "@/types";
 
 export function useAuth() {
   const searchParams = useSearchParams();
@@ -19,6 +26,7 @@ export function useAuth() {
     setFilteredActivityIds,
     setLastRefreshed,
     setCountries,
+    setActivityTypeSettings,
   } = useActivityStore();
 
   function extractCountries(activities: Activity[]) {
@@ -88,6 +96,14 @@ export function useAuth() {
             );
           });
 
+        const activityTypeSettings = activitiesConfig.reduce((acc, config) => {
+          const activitiesOfType = !!activities.find((activity) =>
+            config.activityTypes.includes(activity.type)
+          );
+          return { ...acc, [config.label]: activitiesOfType || null };
+        }, {} as Record<Label, boolean | null>);
+        setActivityTypeSettings(activityTypeSettings);
+
         const geocodedActivities = await geocodeActivities(activities);
         setActivities(geocodedActivities);
         setFilteredActivityIds(geocodedActivities.map((a) => a.id));
@@ -105,6 +121,7 @@ export function useAuth() {
       setFilteredActivityIds,
       setCountries,
       setLastRefreshed,
+      setActivityTypeSettings,
     ]
   );
 
