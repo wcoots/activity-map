@@ -38,12 +38,13 @@
 .subtitle {
   font-size: 0.7em;
   color: #666;
+  white-space: normal;
+  word-break: break-word;
+  width: 248px;
 }
 
 .subtitleMobile {
   width: calc(100svw - 100px);
-  white-space: normal;
-  word-break: break-word;
 }
 
 .activityButtons {
