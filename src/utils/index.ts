@@ -1,10 +1,23 @@
 import { LngLat } from "mapbox-gl";
 import polyline from "@mapbox/polyline";
 import { Feature, FeatureCollection } from "geojson";
-import { ActivityType } from "@/types";
+import { ActivityType, UnitSystem } from "@/types";
+import { unitSystemConfig } from "@/configs";
 
-export function formatDistance(metres: number): string {
-  return `${+(metres / 1000).toFixed(2)}km`;
+export function formatActivityType(activityType: ActivityType): string {
+  return activityType.replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
+export function formatDistance(
+  metres: number,
+  unitSystem: UnitSystem,
+  fractionDigits?: number
+): string {
+  fractionDigits = typeof fractionDigits === "number" ? fractionDigits : 2;
+
+  const denominator = unitSystem === "metric" ? 1000 : 1609.344;
+  const unit = unitSystemConfig[unitSystem].distance;
+  return `${(metres / denominator).toFixed(fractionDigits)}${unit}`;
 }
 
 export function formatSeconds(seconds: number) {
@@ -22,33 +35,47 @@ export function formatSeconds(seconds: number) {
 
 export function formatSpeed(
   metresPerSecond: number,
-  activityType?: ActivityType
+  activityType: ActivityType,
+  unitSystem: UnitSystem
 ): string {
-  if (activityType === ActivityType.MotorcycleRide)
-    return convertSpeedToKph(metresPerSecond);
-  else return convertSpeedToPace(metresPerSecond);
+  if (activityType === ActivityType.MotorcycleRide) {
+    return convertSpeedToSph(metresPerSecond, unitSystem);
+  } else {
+    return convertSpeedToPace(metresPerSecond, unitSystem);
+  }
 }
 
-function convertSpeedToPace(metresPerSecond: number): string {
-  if (metresPerSecond <= 0) {
-    throw new Error("Speed must be greater than 0.");
-  }
+function convertSpeedToSph(
+  metresPerSecond: number,
+  unitSystem: UnitSystem
+): string {
+  const multiplier = unitSystem === "metric" ? 3.6 : 2.23694;
+  const unit = unitSystemConfig[unitSystem].speed;
+  return `${Math.floor(metresPerSecond * multiplier)}${unit}`;
+}
 
-  const secondsPerKilometre = 1000 / metresPerSecond;
-  const minutes = Math.floor(secondsPerKilometre / 60);
-  const seconds = Math.round(secondsPerKilometre % 60)
+function convertSpeedToPace(
+  metresPerSecond: number,
+  unitSystem: UnitSystem
+): string {
+  const numerator = unitSystem === "metric" ? 1000 : 1609.344;
+  const unit = unitSystemConfig[unitSystem].distance;
+  const secondsPerUnit = numerator / metresPerSecond;
+  const minutes = Math.floor(secondsPerUnit / 60);
+  const seconds = Math.round(secondsPerUnit % 60)
     .toString()
     .padStart(2, "0");
 
-  return `${minutes}:${seconds}/km`;
+  return `${minutes}:${seconds}/${unit}`;
 }
 
-function convertSpeedToKph(metresPerSecond: number): string {
-  return `${Math.floor(metresPerSecond * 3.6)}kph`;
-}
-
-export function formatElevation(elevation: number): string {
-  return `${Math.floor(elevation)}m`;
+export function formatElevation(
+  metres: number,
+  unitSystem: UnitSystem
+): string {
+  const multiplier = unitSystem === "metric" ? 1 : 3.28084;
+  const unit = unitSystemConfig[unitSystem].elevation;
+  return `${Math.floor(metres * multiplier)}${unit}`;
 }
 
 export function decodePolyline(encoded: string): LngLat[] {

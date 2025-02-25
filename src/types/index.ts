@@ -2,9 +2,12 @@ import { LngLat, LngLatBounds } from "mapbox-gl";
 
 export enum LocalStorageKey {
   Theme = "theme",
+  UnitSystem = "unitSystem",
 }
 
 export type Theme = "light" | "dark";
+
+export type UnitSystem = "imperial" | "metric";
 
 export enum ActivityType {
   AlpineSki = "AlpineSki",

@@ -10,8 +10,8 @@ import {
 import { Button, Card, Spin, Switch, Tooltip } from "antd";
 
 import { SelectedActivityCard, SettingsDrawer } from "@/components";
-import { themeConfig } from "@/configs";
-import { useMap, useTheme } from "@/hooks";
+import { themeConfig, unitSystemConfig } from "@/configs";
+import { useMap, useTheme, useUnitSystem } from "@/hooks";
 import { isMobile } from "@/utils";
 import {
   useActivityStore,
@@ -24,6 +24,7 @@ import styles from "./page.module.css";
 
 export default function Home() {
   const { toggleTheme } = useTheme();
+  const { toggleUnitSystem } = useUnitSystem();
   const {
     contextHolder,
     mapContainer,
@@ -36,7 +37,7 @@ export default function Home() {
   const { activitiesLoading } = useActivityStore();
   const { isAuthenticated, athleteLoading } = useAuthStore();
   const { mapLoading, theme } = useMapStore();
-  const { setSettingsOpen } = useUIStore();
+  const { unitSystem, setSettingsOpen } = useUIStore();
 
   return (
     <>
@@ -80,16 +81,34 @@ export default function Home() {
           <Tooltip
             placement="right"
             title={
-              isMobile() ? null : `toggle to ${themeConfig[theme].toggle} theme`
+              isMobile() ? null : `switch to ${themeConfig[theme].toggle} theme`
             }
             arrow={false}
           >
             <Switch
-              className={styles.themeButton}
+              className={styles.themeSwitch}
               checkedChildren={<SunFilled />}
               unCheckedChildren={<MoonFilled />}
               checked={theme === "light"}
               onChange={toggleTheme}
+            />
+          </Tooltip>
+
+          <Tooltip
+            placement="right"
+            title={
+              isMobile()
+                ? null
+                : `switch to ${unitSystemConfig[unitSystem].toggle}`
+            }
+            arrow={false}
+          >
+            <Switch
+              className={styles.unitSystemSwitch}
+              checkedChildren={<>Metric</>}
+              unCheckedChildren={<>Imperial</>}
+              checked={unitSystem === "metric"}
+              onChange={toggleUnitSystem}
             />
           </Tooltip>
 

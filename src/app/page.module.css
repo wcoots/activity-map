@@ -30,9 +30,15 @@
   gap: 20px;
 }
 
-.themeButton {
+.themeSwitch {
   position: absolute;
   top: 20px;
+  left: 20px;
+}
+
+.unitSystemSwitch {
+  position: absolute;
+  top: 50px;
   left: 20px;
 }
 

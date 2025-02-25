@@ -11,8 +11,9 @@ import {
 } from "@ant-design/icons";
 import { Button, Card } from "antd";
 
-import { useActivityStore } from "@/store";
+import { useActivityStore, useUIStore } from "@/store";
 import {
+  formatActivityType,
   formatDistance,
   formatSpeed,
   formatSeconds,
@@ -33,6 +34,7 @@ export default function SelectedActivityCard({
 }) {
   const { selectedActivityId, activities, filteredActivityIds } =
     useActivityStore();
+  const { unitSystem } = useUIStore();
 
   if (!selectedActivityId) return null;
 
@@ -92,21 +94,25 @@ export default function SelectedActivityCard({
         title={header}
       >
         <strong>Type: </strong>
-        {selectedActivity.type}
+        {formatActivityType(selectedActivity.type)}
         <br />
         <strong>Distance: </strong>
-        {formatDistance(selectedActivity.distance)}
+        {formatDistance(selectedActivity.distance, unitSystem)}
         <br />
         <strong>Moving Time: </strong>
         {formatSeconds(selectedActivity.movingTime)}
         <br />
         <strong>Average Pace: </strong>
-        {formatSpeed(selectedActivity.averageSpeed, selectedActivity.type)}
+        {formatSpeed(
+          selectedActivity.averageSpeed,
+          selectedActivity.type,
+          unitSystem
+        )}
         <br />
         {selectedActivity.totalElevationGain && (
           <>
             <strong>Elevation Gain: </strong>
-            {formatElevation(selectedActivity.totalElevationGain)}
+            {formatElevation(selectedActivity.totalElevationGain, unitSystem)}
           </>
         )}
         <div className={styles.activityButtons}>
