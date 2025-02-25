@@ -24,6 +24,7 @@ export enum ActivityType {
   InlineSkate = "InlineSkate",
   Kayaking = "Kayaking",
   Kitesurf = "Kitesurf",
+  MotorcycleRide = "MotorcycleRide",
   MountainBikeRide = "MountainBikeRide",
   NordicSki = "NordicSki",
   Pickleball = "Pickleball",
@@ -102,7 +103,7 @@ export interface Activity {
   name: string;
   distance: number;
   movingTime: number;
-  totalElevationGain: number;
+  totalElevationGain: number | null;
   averageSpeed: number;
   type: ActivityType;
   startDate: Date;

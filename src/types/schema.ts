@@ -30,7 +30,7 @@ interface ActivitiesTable {
   distance: number;
   moving_time: number;
   average_speed: number;
-  elevation_gain: number;
+  elevation_gain: number | null;
   country: string | null;
   address: string | null;
   polyline: string | null;

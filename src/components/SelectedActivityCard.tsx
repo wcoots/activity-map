@@ -12,7 +12,13 @@ import {
 import { Button, Card } from "antd";
 
 import { useActivityStore } from "@/store";
-import { convertSpeedToPace, formatSeconds, isMobile } from "@/utils";
+import {
+  formatDistance,
+  formatSpeed,
+  formatSeconds,
+  formatElevation,
+  isMobile,
+} from "@/utils";
 
 import styles from "./SelectedActivityCard.module.css";
 
@@ -89,16 +95,20 @@ export default function SelectedActivityCard({
         {selectedActivity.type}
         <br />
         <strong>Distance: </strong>
-        {+(selectedActivity.distance / 1000).toFixed(2)}km
+        {formatDistance(selectedActivity.distance)}
         <br />
         <strong>Moving Time: </strong>
         {formatSeconds(selectedActivity.movingTime)}
         <br />
         <strong>Average Pace: </strong>
-        {convertSpeedToPace(selectedActivity.averageSpeed)}
+        {formatSpeed(selectedActivity.averageSpeed, selectedActivity.type)}
         <br />
-        <strong>Elevation Gain: </strong>
-        {Math.floor(selectedActivity.totalElevationGain)}m
+        {selectedActivity.totalElevationGain && (
+          <>
+            <strong>Elevation Gain: </strong>
+            {formatElevation(selectedActivity.totalElevationGain)}
+          </>
+        )}
         <div className={styles.activityButtons}>
           <Button
             type="primary"

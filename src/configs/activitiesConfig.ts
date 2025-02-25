@@ -67,6 +67,7 @@ export const activitiesConfig: {
       ActivityType.Elliptical,
       ActivityType.Golf,
       ActivityType.HighIntensityIntervalTraining,
+      ActivityType.MotorcycleRide,
       ActivityType.Pickleball,
       ActivityType.Pilates,
       ActivityType.Racquetball,

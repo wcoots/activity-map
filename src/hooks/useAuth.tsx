@@ -100,7 +100,8 @@ export function useAuth() {
           const activitiesOfType = !!activities.find((activity) =>
             config.activityTypes.includes(activity.type)
           );
-          return { ...acc, [config.label]: activitiesOfType || null };
+          if (!activitiesOfType) return acc;
+          return { ...acc, [config.label]: config.label !== "Other" };
         }, {} as Record<Label, boolean | null>);
         setActivityTypeSettings(activityTypeSettings);
 

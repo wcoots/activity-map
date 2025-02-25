@@ -1,11 +1,16 @@
 import { LngLat } from "mapbox-gl";
 import polyline from "@mapbox/polyline";
 import { Feature, FeatureCollection } from "geojson";
+import { ActivityType } from "@/types";
+
+export function formatDistance(metres: number): string {
+  return `${+(metres / 1000).toFixed(2)}km`;
+}
 
 export function formatSeconds(seconds: number) {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
+  const secs = Math.round(seconds % 60);
 
   let formatted = "";
   if (hours > 0) formatted += `${hours}h `;
@@ -15,7 +20,16 @@ export function formatSeconds(seconds: number) {
   return formatted.trim();
 }
 
-export function convertSpeedToPace(metresPerSecond: number): string {
+export function formatSpeed(
+  metresPerSecond: number,
+  activityType?: ActivityType
+): string {
+  if (activityType === ActivityType.MotorcycleRide)
+    return convertSpeedToKph(metresPerSecond);
+  else return convertSpeedToPace(metresPerSecond);
+}
+
+function convertSpeedToPace(metresPerSecond: number): string {
   if (metresPerSecond <= 0) {
     throw new Error("Speed must be greater than 0.");
   }
@@ -26,7 +40,15 @@ export function convertSpeedToPace(metresPerSecond: number): string {
     .toString()
     .padStart(2, "0");
 
-  return `${minutes}:${seconds} /km`;
+  return `${minutes}:${seconds}/km`;
+}
+
+function convertSpeedToKph(metresPerSecond: number): string {
+  return `${Math.floor(metresPerSecond * 3.6)}kph`;
+}
+
+export function formatElevation(elevation: number): string {
+  return `${Math.floor(elevation)}m`;
 }
 
 export function decodePolyline(encoded: string): LngLat[] {
