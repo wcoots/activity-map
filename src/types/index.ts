@@ -93,7 +93,7 @@ export interface RawActivity {
   name: string;
   distance: number;
   moving_time: number;
-  total_elevation_gain: number;
+  total_elevation_gain: number | null;
   sport_type: ActivityType;
   start_date: string;
   timezone: string;
