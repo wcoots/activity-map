@@ -16,6 +16,7 @@ interface AthletesTable {
   weight: number | null;
   profile: string;
   profile_medium: string;
+  public: boolean;
 }
 
 interface ActivitiesTable {

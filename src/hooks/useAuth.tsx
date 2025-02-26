@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { message } from "antd";
 import { LngLat, LngLatBounds } from "mapbox-gl";
 
@@ -16,10 +16,17 @@ import {
 } from "@/types";
 
 export function useAuth() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [messageApi, contextHolder] = message.useMessage();
 
-  const { setIsAuthenticated, setAthleteLoading, setAthlete } = useAuthStore();
+  const {
+    setIsAuthenticated,
+    setIsVisitorMode,
+    setAthleteLoading,
+    setAthlete,
+  } = useAuthStore();
+
   const {
     setActivitiesLoading,
     setActivities,
@@ -28,6 +35,8 @@ export function useAuth() {
     setCountries,
     setActivityTypeSettings,
   } = useActivityStore();
+
+  const user = searchParams.get("user");
 
   function extractCountries(activities: Activity[]) {
     return unique(
@@ -39,7 +48,11 @@ export function useAuth() {
 
   const fetchAthlete = useCallback(async () => {
     try {
-      const response = await fetch("/api/athlete");
+      const response = await fetch("/api/athlete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user }),
+      });
       if (!response.ok) return;
 
       const athlete: Athlete = await response.json();
@@ -50,7 +63,7 @@ export function useAuth() {
     } finally {
       setAthleteLoading(false);
     }
-  }, [setAthlete, setAthleteLoading]);
+  }, [user, setAthlete, setAthleteLoading]);
 
   const fetchActivities = useCallback(
     async (athlete: Athlete) => {
@@ -129,6 +142,19 @@ export function useAuth() {
   const checkAuth = useCallback(async () => {
     // Check authentication status and fetch athlete/activities if authenticated
     try {
+      if (user) {
+        await fetch("/api/auth/logout");
+
+        const althete = await fetchAthlete();
+        if (althete) {
+          setIsVisitorMode(true);
+          await fetchActivities(althete);
+        } else {
+          router.replace(window.location.pathname, { scroll: false });
+        }
+        return;
+      }
+
       setAthleteLoading(true);
       setActivitiesLoading(true);
 
@@ -145,9 +171,12 @@ export function useAuth() {
       setIsAuthenticated(false);
     }
   }, [
+    router,
+    user,
     setAthleteLoading,
     setActivitiesLoading,
     setIsAuthenticated,
+    setIsVisitorMode,
     fetchAthlete,
     fetchActivities,
   ]);

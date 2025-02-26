@@ -1,8 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/app/api/kysely";
 import { retrieveAccessToken } from "@/app/api/utils";
 import { Athlete, RawAthelete } from "@/types";
+
+async function fetchAthlete(athleteId: number) {
+  return db
+    .selectFrom("activitymap.athletes")
+    .select(["id", "forename", "surname", "profile", "public"])
+    .where("id", "=", athleteId)
+    .where("public", "=", true)
+    .executeTakeFirst();
+}
 
 async function stashAthlete(athlete: RawAthelete) {
   return db
@@ -21,6 +30,7 @@ async function stashAthlete(athlete: RawAthelete) {
       weight: athlete.weight ? athlete.weight : null,
       profile: athlete.profile,
       profile_medium: athlete.profile_medium,
+      public: false,
     })
     .onConflict((oc) =>
       oc.column("id").doUpdateSet((eb) => ({
@@ -41,8 +51,30 @@ async function stashAthlete(athlete: RawAthelete) {
     .executeTakeFirst();
 }
 
-export async function GET(): Promise<NextResponse> {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    const { user }: { user?: string | null } = await request.json();
+
+    if (user) {
+      const databaseAthlete = await fetchAthlete(+user);
+      if (!databaseAthlete)
+        return NextResponse.json(
+          { error: "Athlete not found" },
+          { status: 404 }
+        );
+
+      const athlete: Athlete = {
+        id: databaseAthlete.id,
+        firstName: databaseAthlete.forename ?? "",
+        lastName: databaseAthlete.surname ?? "",
+        imageUrl: databaseAthlete.profile,
+        public: databaseAthlete.public,
+        totalActivityCount: Infinity,
+      };
+
+      return NextResponse.json(athlete);
+    }
+
     const accessToken = await retrieveAccessToken();
     if (typeof accessToken !== "string") return accessToken;
 
@@ -59,6 +91,8 @@ export async function GET(): Promise<NextResponse> {
     }
 
     const rawAthlete: RawAthelete = await athleteResponse.json();
+
+    const databaseAthlete = await fetchAthlete(+rawAthlete.id);
 
     const athleteStatsResponse = await fetch(
       `https://www.strava.com/api/v3/athletes/${rawAthlete.id}/stats`,
@@ -81,6 +115,7 @@ export async function GET(): Promise<NextResponse> {
       firstName: rawAthlete.firstname ?? "",
       lastName: rawAthlete.lastname ?? "",
       imageUrl: rawAthlete.profile_medium,
+      public: databaseAthlete?.public ?? false,
       totalActivityCount: totalActivityCount,
     };
 

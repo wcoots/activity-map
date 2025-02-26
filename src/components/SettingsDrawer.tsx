@@ -31,7 +31,7 @@ export default function SettingsDrawer({
 }: {
   fitBoundsOfActivities: () => void;
 }) {
-  const { athlete } = useAuthStore();
+  const { athlete, isVisitorMode } = useAuthStore();
   const {
     selectedActivityId,
     activityTypeSettings,
@@ -47,15 +47,27 @@ export default function SettingsDrawer({
     setSelectedCountry,
   } = useActivityStore();
   const { theme } = useMapStore();
-  const { settingsOpen, setSettingsOpen } = useUIStore();
+  const { settingsOpen, setSettingsOpen, setShareModalOpen } = useUIStore();
+
+  function share() {
+    setShareModalOpen(true);
+    setSettingsOpen(false);
+  }
 
   function logout() {
     window.location.href = "/api/auth/logout";
   }
 
-  const header = athlete ? (
+  if (!athlete) {
+    logout();
+    return null;
+  }
+
+  const header = (
     <span className={styles.header}>
-      {`Welcome, ${athlete.firstName} ${athlete.lastName}`}
+      {isVisitorMode
+        ? `Viewing ${athlete.firstName} ${athlete.lastName}`
+        : `Welcome, ${athlete.firstName} ${athlete.lastName}`}
       <a
         className={styles.image}
         href={`https://www.strava.com/athletes/${athlete.id}`}
@@ -65,28 +77,36 @@ export default function SettingsDrawer({
         <img src={athlete.imageUrl} alt="Profile" height={20} />
       </a>
     </span>
-  ) : (
-    <span className={styles.header}>Welcome</span>
   );
 
   const footer = (
-    <span className={styles.footer}>
-      {lastRefreshed && (
+    <>
+      {lastRefreshed && !isVisitorMode && (
         <span className={styles.lastRefreshed}>
           Last refreshed: {dayjs(lastRefreshed).format("HH:mm ddd D MMM")}
         </span>
       )}
-      <Button
-        className={styles.githubButton}
-        href={process.env.GITHUB_URL}
-        target="_blank"
-      >
-        <GithubOutlined />
-      </Button>
-      <Button className={styles.logoutButton} danger onClick={logout}>
-        Logout
-      </Button>
-    </span>
+      <span className={styles.footer}>
+        <Button
+          className={styles.githubButton}
+          href={process.env.GITHUB_URL}
+          target="_blank"
+        >
+          <GithubOutlined />
+        </Button>
+        {isVisitorMode && lastRefreshed && (
+          <span className={styles.lastRefreshed}>
+            Last refreshed: {dayjs(lastRefreshed).format("HH:mm ddd D MMM")}
+          </span>
+        )}
+        {!isVisitorMode && <Button onClick={share}>Publicity Settings</Button>}
+        {!isVisitorMode && (
+          <Button className={styles.logoutButton} danger onClick={logout}>
+            Logout
+          </Button>
+        )}
+      </span>
+    </>
   );
 
   return (

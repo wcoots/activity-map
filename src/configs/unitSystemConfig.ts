@@ -9,5 +9,5 @@ export const unitSystemConfig: {
   };
 } = {
   imperial: { distance: "mi", elevation: "ft", speed: "mph", toggle: "metric" },
-  metric: { distance: "km", elevation: "m", speed: "km/h", toggle: "imperial" },
+  metric: { distance: "km", elevation: "m", speed: "kph", toggle: "imperial" },
 };

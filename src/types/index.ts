@@ -84,6 +84,7 @@ export interface Athlete {
   firstName: string;
   lastName: string;
   imageUrl: string;
+  public: boolean;
   totalActivityCount: number;
 }
 
