@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { Feature } from "geojson";
 import mapboxgl, {
+  CircleLayerSpecification,
   GeoJSONSource,
   LineLayerSpecification,
   LngLatBounds,
@@ -18,6 +19,7 @@ enum SourceIds {
   ActivitySource = "activity-source",
   HoveredActivitySource = "hovered-activity-source",
   SelectedActivitySource = "selected-activity-source",
+  WayPointSource = "way-point-source",
 }
 
 enum LayerIds {
@@ -25,6 +27,7 @@ enum LayerIds {
   InteractiveActivityLayer = "interactive-activity-layer",
   HoveredActivityLayer = "hovered-activity-layer",
   SelectedActivityLayer = "selected-activity-layer",
+  WayPointLayer = "way-point-layer",
 }
 
 const INTERACTIVE_LAYERS = [
@@ -32,6 +35,7 @@ const INTERACTIVE_LAYERS = [
   LayerIds.InteractiveActivityLayer,
   LayerIds.HoveredActivityLayer,
   LayerIds.SelectedActivityLayer,
+  LayerIds.WayPointLayer,
 ];
 
 export function useMap() {
@@ -86,12 +90,28 @@ export function useMap() {
     }
   }
 
+  function initialisePointLayer(
+    layerId: LayerIds,
+    sourceId: SourceIds,
+    paint: CircleLayerSpecification["paint"] = {}
+  ) {
+    if (map.current && !map.current.getLayer(layerId)) {
+      map.current.addLayer({
+        id: layerId,
+        source: sourceId,
+        type: "circle",
+        paint,
+      });
+    }
+  }
+
   const createMapLayers = useCallback(() => {
     if (!map.current) return;
 
     initialiseSource(SourceIds.ActivitySource);
     initialiseSource(SourceIds.HoveredActivitySource);
     initialiseSource(SourceIds.SelectedActivitySource);
+    initialiseSource(SourceIds.WayPointSource);
 
     initialiseLineLayer(
       LayerIds.InteractiveActivityLayer,
@@ -121,6 +141,13 @@ export function useMap() {
         "line-border-width": 2,
       }
     );
+
+    initialisePointLayer(LayerIds.WayPointLayer, SourceIds.WayPointSource, {
+      "circle-color": ["get", "colour"],
+      "circle-radius": 5,
+      "circle-stroke-color": ["get", "borderColour"],
+      "circle-stroke-width": 2,
+    });
   }, []);
 
   const filterSourceActivities = useCallback(() => {
@@ -173,31 +200,41 @@ export function useMap() {
     (source: GeoJSONSource, activityId: number | null) => {
       if (!source) return;
 
-      const featureCollection = createFeatureCollection([]);
+      const circleSource = map.current?.getSource<GeoJSONSource>(
+        SourceIds.WayPointSource
+      );
+
+      if (!circleSource) return;
+
+      const lineFeatureCollection = createFeatureCollection([]);
+      const circleFeatureCollection = createFeatureCollection([]);
+
+      if (source.id === SourceIds.SelectedActivitySource)
+        circleSource.setData(circleFeatureCollection);
 
       const activity = activities.find(
         (activity) => activity.id === activityId
       );
 
-      if (!activity) return source.setData(featureCollection);
+      if (!activity) return source.setData(lineFeatureCollection);
 
       const featureState = map.current?.getFeatureState({
         source: SourceIds.ActivitySource,
         id: activity.id,
       });
 
-      if (!featureState?.shown) return source.setData(featureCollection);
+      if (!featureState?.shown) return source.setData(lineFeatureCollection);
 
       const configItem = activitiesConfig.find((config) =>
         config.activityTypes.includes(activity.type)
       );
 
-      if (!configItem) return source.setData(featureCollection);
+      if (!configItem) return source.setData(lineFeatureCollection);
 
       const colour = configItem.colour[theme];
       const borderColour = themeConfig[theme].borderColour;
 
-      const feature: Feature = {
+      const lineFeature: Feature = {
         type: "Feature",
         properties: { id: activity.id, colour, borderColour },
         geometry: {
@@ -206,9 +243,34 @@ export function useMap() {
         },
       };
 
-      featureCollection.features.push(feature);
+      const startPosition = activity.positions[0];
+      const endPosition = activity.positions[activity.positions.length - 1];
 
-      source.setData(featureCollection);
+      const startPointFeature: Feature = {
+        type: "Feature",
+        properties: { id: activity.id, colour: "#cc5500", borderColour },
+        geometry: {
+          type: "Point",
+          coordinates: [startPosition.lng, startPosition.lat],
+        },
+      };
+
+      const endPointFeature: Feature = {
+        type: "Feature",
+        properties: { id: activity.id, colour: "#3cb043", borderColour },
+        geometry: {
+          type: "Point",
+          coordinates: [endPosition.lng, endPosition.lat],
+        },
+      };
+
+      lineFeatureCollection.features.push(lineFeature);
+      circleFeatureCollection.features.push(startPointFeature);
+      circleFeatureCollection.features.push(endPointFeature);
+
+      source.setData(lineFeatureCollection);
+      if (source.id === SourceIds.SelectedActivitySource)
+        circleSource.setData(circleFeatureCollection);
     },
     [theme, activities]
   );
