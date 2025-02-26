@@ -99,6 +99,18 @@ export default function SettingsDrawer({
             Last refreshed: {dayjs(lastRefreshed).format("HH:mm ddd D MMM")}
           </span>
         )}
+        {isVisitorMode && (
+          <Button
+            className={styles.logoutButton}
+            variant="outlined"
+            color="lime"
+            onClick={() => {
+              window.location.href = "/api/auth/strava";
+            }}
+          >
+            Login
+          </Button>
+        )}
         {!isVisitorMode && <Button onClick={share}>Publicity Settings</Button>}
         {!isVisitorMode && (
           <Button className={styles.logoutButton} danger onClick={logout}>
