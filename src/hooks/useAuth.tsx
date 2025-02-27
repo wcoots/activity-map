@@ -13,6 +13,7 @@ import {
   Activity,
   GeocodedActivities,
   Label,
+  ActivityType,
 } from "@/types";
 
 export function useAuth() {
@@ -28,6 +29,8 @@ export function useAuth() {
   } = useAuthStore();
 
   const {
+    activities: storeActivities,
+    selectedActivityId,
     setActivitiesLoading,
     setActivities,
     setFilteredActivityIds,
@@ -81,7 +84,12 @@ export function useAuth() {
         const activities = result
           .filter((activity) => activity.map.summary_polyline.length)
           .map((activity): Activity => {
-            const positions = decodePolyline(activity.map.summary_polyline);
+            const fullPolylineAvailable = !!activity.map.polyline?.length;
+            const positions = decodePolyline(
+              fullPolylineAvailable
+                ? activity.map.polyline!
+                : activity.map.summary_polyline
+            );
             const longitudes = positions.map((p) => p.lng);
             const latitudes = positions.map((p) => p.lat);
             const bounds = new LngLatBounds(
@@ -99,6 +107,7 @@ export function useAuth() {
               type: activity.sport_type,
               startDate: new Date(activity.start_date),
               positions,
+              summaryPositions: !fullPolylineAvailable,
               bounds,
               location: null,
             };
@@ -197,15 +206,51 @@ export function useAuth() {
 
       const result: GeocodedActivities = await response.json();
 
-      return activities.map((activity) => ({
-        ...activity,
-        location: result[activity.id] ?? null,
-      }));
+      return activities.map(
+        (activity): Activity => ({
+          ...activity,
+          location: result[activity.id] ?? null,
+        })
+      );
     } catch (err) {
       console.error("Error fetching geocodes:", err);
       return [];
     }
   }
+
+  const fetchActivity = useCallback(
+    async (activityId: number) => {
+      try {
+        const response = await fetch("/api/activity", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ activityId }),
+        });
+        if (!response.ok) return;
+
+        const activity: RawActivity = await response.json();
+        const { polyline } = activity.map;
+
+        if (polyline) {
+          setActivities(
+            storeActivities.map((activity) => {
+              if (activity.id === activityId) {
+                return {
+                  ...activity,
+                  summaryPositions: false,
+                  positions: decodePolyline(polyline),
+                };
+              }
+              return activity;
+            })
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching activity:", err);
+      }
+    },
+    [storeActivities, setActivities]
+  );
 
   useEffect(
     function checkAuthAndLoadData() {
@@ -223,6 +268,24 @@ export function useAuth() {
       }
     },
     [searchParams, messageApi]
+  );
+
+  useEffect(
+    function fetchFullActivity() {
+      if (!selectedActivityId) return;
+      const selectedActivity = storeActivities.find(
+        (activity) => activity.id === selectedActivityId
+      );
+      if (
+        !selectedActivity ||
+        !selectedActivity.summaryPositions ||
+        selectedActivity.type === ActivityType.MotorcycleRide
+      )
+        return;
+
+      fetchActivity(selectedActivityId);
+    },
+    [storeActivities, selectedActivityId, fetchActivity]
   );
 
   return { contextHolder };

@@ -99,7 +99,7 @@ export interface RawActivity {
   start_date: string;
   timezone: string;
   average_speed: number;
-  map: { summary_polyline: string };
+  map: { summary_polyline: string; polyline: string | null };
 }
 
 export interface Activity {
@@ -112,6 +112,7 @@ export interface Activity {
   type: ActivityType;
   startDate: Date;
   positions: LngLat[];
+  summaryPositions: boolean;
   bounds: LngLatBounds;
   location: Geocode | null;
 }

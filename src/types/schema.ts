@@ -34,6 +34,7 @@ interface ActivitiesTable {
   elevation_gain: number | null;
   country: string | null;
   address: string | null;
+  summary_polyline: string | null;
   polyline: string | null;
 }
 

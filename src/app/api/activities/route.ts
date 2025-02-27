@@ -20,6 +20,7 @@ async function fetchDatabaseActivities(athleteId: number): Promise<{
       "moving_time",
       "average_speed",
       "elevation_gain",
+      "summary_polyline",
       "polyline",
     ])
     .where("athlete_id", "=", athleteId)
@@ -41,7 +42,7 @@ async function fetchDatabaseActivities(athleteId: number): Promise<{
   );
 
   const activities = storedActivities
-    .filter((activity) => activity.polyline)
+    .filter((activity) => activity.summary_polyline)
     .map(
       (activity): RawActivity => ({
         id: activity.id,
@@ -54,7 +55,10 @@ async function fetchDatabaseActivities(athleteId: number): Promise<{
         moving_time: activity.moving_time,
         total_elevation_gain: activity.elevation_gain,
         average_speed: activity.average_speed,
-        map: { summary_polyline: activity.polyline! },
+        map: {
+          summary_polyline: activity.summary_polyline!,
+          polyline: activity.polyline,
+        },
       })
     );
 
@@ -63,8 +67,9 @@ async function fetchDatabaseActivities(athleteId: number): Promise<{
 
 async function fetchStravaActivities(
   accessToken: string,
-  query: string
+  queryParameters: string
 ): Promise<RawActivity[]> {
+  const query = `https://www.strava.com/api/v3/athlete/activities?${queryParameters}`;
   const response = await fetch(query, {
     method: "GET",
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -92,9 +97,10 @@ async function stashActivities(activities: RawActivity[]): Promise<void> {
         moving_time: activity.moving_time,
         average_speed: activity.average_speed,
         elevation_gain: activity.total_elevation_gain,
-        polyline: activity.map.summary_polyline.length
+        summary_polyline: activity.map.summary_polyline.length
           ? activity.map.summary_polyline
           : null,
+        polyline: null,
       }))
     )
     .onConflict((oc) =>
@@ -109,7 +115,7 @@ async function stashActivities(activities: RawActivity[]): Promise<void> {
         moving_time: eb.ref("excluded.moving_time"),
         average_speed: eb.ref("excluded.average_speed"),
         elevation_gain: eb.ref("excluded.elevation_gain"),
-        polyline: eb.ref("excluded.polyline"),
+        summary_polyline: eb.ref("excluded.summary_polyline"),
       }))
     )
     .executeTakeFirst();
@@ -131,8 +137,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         ? `&after=${mostRecentActivityTime}`
         : "";
 
-      const query = `https://www.strava.com/api/v3/athlete/activities?per_page=200&${afterTimeParameter}`;
-      const result = await fetchStravaActivities(accessToken, query);
+      const queryParameters = `per_page=200&${afterTimeParameter}`;
+      const result = await fetchStravaActivities(accessToken, queryParameters);
 
       if (result.length) {
         await stashActivities(result);
@@ -149,8 +155,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const rows = await Promise.all(
       Array.from({ length: pages }, async (_, i) => {
         const pageNumber = i + 1;
-        const query = `https://www.strava.com/api/v3/athlete/activities?per_page=200&page=${pageNumber}`;
-        const result = await fetchStravaActivities(accessToken, query);
+        const queryParameters = `per_page=200&page=${pageNumber}`;
+        const result = await fetchStravaActivities(
+          accessToken,
+          queryParameters
+        );
         return result;
       })
     );
@@ -163,8 +172,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // if the total number of activities is a multiple of 200, fetch any remaining activities
     while (queryConfig.totalRows % 200 === 0) {
-      const query = `https://www.strava.com/api/v3/athlete/activities?per_page=200&page=${queryConfig.currentPage}`;
-      const result = await fetchStravaActivities(accessToken, query);
+      const queryParameters = `per_page=200&page=${queryConfig.currentPage}`;
+      const result = await fetchStravaActivities(accessToken, queryParameters);
       if (!result.length) break;
 
       activities.push(...result);
