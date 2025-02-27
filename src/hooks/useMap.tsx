@@ -19,6 +19,7 @@ enum SourceIds {
   ActivitySource = "activity-source",
   HoveredActivitySource = "hovered-activity-source",
   SelectedActivitySource = "selected-activity-source",
+  AnimatedActivitySource = "animated-activity-source",
   WayPointSource = "way-point-source",
 }
 
@@ -27,6 +28,7 @@ enum LayerIds {
   InteractiveActivityLayer = "interactive-activity-layer",
   HoveredActivityLayer = "hovered-activity-layer",
   SelectedActivityLayer = "selected-activity-layer",
+  AnimatedActivityLayer = "animated-activity-layer",
   WayPointLayer = "way-point-layer",
 }
 
@@ -46,6 +48,7 @@ export function useMap() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<Map | null>(null);
   const europeBounds = new LngLatBounds([-10, 38], [25, 58]);
+  const animationFrameId = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     activitiesLoading,
@@ -111,6 +114,7 @@ export function useMap() {
     initialiseSource(SourceIds.ActivitySource);
     initialiseSource(SourceIds.HoveredActivitySource);
     initialiseSource(SourceIds.SelectedActivitySource);
+    initialiseSource(SourceIds.AnimatedActivitySource);
     initialiseSource(SourceIds.WayPointSource);
 
     initialiseLineLayer(
@@ -134,6 +138,17 @@ export function useMap() {
     initialiseLineLayer(
       LayerIds.SelectedActivityLayer,
       SourceIds.SelectedActivitySource,
+      {
+        "line-color": ["get", "colour"],
+        "line-width": 7,
+        "line-border-color": ["get", "borderColour"],
+        "line-border-width": 2,
+      }
+    );
+
+    initialiseLineLayer(
+      LayerIds.AnimatedActivityLayer,
+      SourceIds.AnimatedActivitySource,
       {
         "line-color": ["get", "colour"],
         "line-width": 7,
@@ -189,47 +204,48 @@ export function useMap() {
       return [...acc, feature];
     }, []);
 
-    const activityFeatureCollection = createFeatureCollection(features);
+    const featureCollection = createFeatureCollection(features);
 
     map.current
       ?.getSource<GeoJSONSource>(SourceIds.ActivitySource)
-      ?.setData(activityFeatureCollection);
+      ?.setData(featureCollection);
   }, [theme, activities]);
 
   const populateHighlightedSource = useCallback(
     (source: GeoJSONSource, activityId: number | null) => {
       if (!source) return;
 
-      const circleSource = map.current?.getSource<GeoJSONSource>(
+      const wayPointSource = map.current?.getSource<GeoJSONSource>(
         SourceIds.WayPointSource
       );
 
-      if (!circleSource) return;
+      if (!wayPointSource) return;
 
       const lineFeatureCollection = createFeatureCollection([]);
       const circleFeatureCollection = createFeatureCollection([]);
 
-      if (source.id === SourceIds.SelectedActivitySource)
-        circleSource.setData(circleFeatureCollection);
+      if (source.id === SourceIds.SelectedActivitySource) {
+        clearSource(SourceIds.WayPointSource);
+      }
 
       const activity = activities.find(
         (activity) => activity.id === activityId
       );
 
-      if (!activity) return source.setData(lineFeatureCollection);
+      if (!activity) return clearSource(source.id as SourceIds);
 
       const featureState = map.current?.getFeatureState({
         source: SourceIds.ActivitySource,
         id: activity.id,
       });
 
-      if (!featureState?.shown) return source.setData(lineFeatureCollection);
+      if (!featureState?.shown) return clearSource(source.id as SourceIds);
 
       const configItem = activitiesConfig.find((config) =>
         config.activityTypes.includes(activity.type)
       );
 
-      if (!configItem) return source.setData(lineFeatureCollection);
+      if (!configItem) return clearSource(source.id as SourceIds);
 
       const colour = configItem.colour[theme];
       const borderColour = themeConfig[theme].borderColour;
@@ -270,7 +286,7 @@ export function useMap() {
 
       source.setData(lineFeatureCollection);
       if (source.id === SourceIds.SelectedActivitySource)
-        circleSource.setData(circleFeatureCollection);
+        wayPointSource.setData(circleFeatureCollection);
     },
     [theme, activities]
   );
@@ -339,6 +355,106 @@ export function useMap() {
       : { top: 100, right: 100, bottom: 250, left: 250 };
 
     map.current.fitBounds(selectedActivity.bounds, { padding });
+  }
+
+  function animateSelectedActivity() {
+    const animatedActivitySource = map.current?.getSource<GeoJSONSource>(
+      SourceIds.AnimatedActivitySource
+    );
+
+    const wayPointSource = map.current?.getSource<GeoJSONSource>(
+      SourceIds.WayPointSource
+    );
+
+    if (!animatedActivitySource || !wayPointSource) return;
+
+    if (animationFrameId.current !== null) {
+      clearTimeout(animationFrameId.current);
+      animationFrameId.current = null;
+    }
+
+    clearSource(SourceIds.SelectedActivitySource);
+
+    const activity = activities.find(
+      (activity) => activity.id === selectedActivityId
+    );
+
+    if (!activity) return;
+
+    const configItem = activitiesConfig.find((config) =>
+      config.activityTypes.includes(activity.type)
+    );
+
+    if (!configItem) return;
+
+    const colour = configItem.colour[theme];
+    const borderColour = themeConfig[theme].borderColour;
+    const speed = 20;
+
+    function animateLine(index: number) {
+      if (
+        !activity ||
+        !animatedActivitySource ||
+        !wayPointSource ||
+        index > activity.positions.length
+      ) {
+        animationFrameId.current = null;
+        return;
+      }
+
+      const positions = activity.positions.slice(0, index);
+
+      const lineFeature: Feature = {
+        type: "Feature",
+        properties: { id: activity.id, colour, borderColour },
+        geometry: {
+          type: "LineString",
+          coordinates: positions.map((pos) => [pos.lng, pos.lat]),
+        },
+      };
+
+      const startPosition = positions[0];
+      const endPosition = positions[positions.length - 1];
+
+      const startPointFeature: Feature = {
+        type: "Feature",
+        properties: { id: activity.id, colour: "#cc5500", borderColour },
+        geometry: {
+          type: "Point",
+          coordinates: [startPosition.lng, startPosition.lat],
+        },
+      };
+
+      const endPointFeature: Feature = {
+        type: "Feature",
+        properties: { id: activity.id, colour: "#3cb043", borderColour },
+        geometry: {
+          type: "Point",
+          coordinates: [endPosition.lng, endPosition.lat],
+        },
+      };
+
+      const lineFeatureCollection = createFeatureCollection([lineFeature]);
+      animatedActivitySource.setData(lineFeatureCollection);
+
+      const circleFeatureCollection = createFeatureCollection([
+        startPointFeature,
+        endPointFeature,
+      ]);
+      wayPointSource.setData(circleFeatureCollection);
+
+      animationFrameId.current = setTimeout(
+        () => animateLine(index + 1),
+        speed
+      );
+    }
+
+    animationFrameId.current = setTimeout(() => animateLine(1), speed);
+  }
+
+  function clearSource(sourceId: SourceIds) {
+    const featureCollection = createFeatureCollection([]);
+    map.current?.getSource<GeoJSONSource>(sourceId)?.setData(featureCollection);
   }
 
   useEffect(
@@ -476,21 +592,30 @@ export function useMap() {
       );
 
       if (!source) return;
+      if (hoveredActivityId && hoveredActivityId === selectedActivityId) return;
 
       populateHighlightedSource(source, hoveredActivityId);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [populateHighlightedSource, hoveredActivityId]
   );
 
   useEffect(
     function updateSelectedActivity() {
-      const source = map.current?.getSource<GeoJSONSource>(
+      const selectedActivitySource = map.current?.getSource<GeoJSONSource>(
         SourceIds.SelectedActivitySource
       );
 
-      if (!source) return;
+      if (!selectedActivitySource) return;
 
-      populateHighlightedSource(source, selectedActivityId);
+      if (animationFrameId.current !== null) {
+        clearTimeout(animationFrameId.current);
+        animationFrameId.current = null;
+      }
+
+      clearSource(SourceIds.AnimatedActivitySource);
+
+      populateHighlightedSource(selectedActivitySource, selectedActivityId);
     },
     [populateHighlightedSource, selectedActivityId]
   );
@@ -502,5 +627,6 @@ export function useMap() {
     fitBoundsOfActivities,
     getNextActivityId,
     getPreviousActivityId,
+    animateSelectedActivity,
   };
 }

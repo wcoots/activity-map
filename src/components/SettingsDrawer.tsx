@@ -177,7 +177,7 @@ export default function SettingsDrawer({
           0: "0km",
           [highestDistance]: `${highestDistance.toString()}km`,
         }}
-        onChange={([min, max]) => {
+        onChangeComplete={([min, max]) => {
           setMinimumDistance(min);
           setMaximumDistance(max);
         }}

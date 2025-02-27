@@ -32,6 +32,7 @@ export default function Home() {
     fitBoundsOfActivities,
     getPreviousActivityId,
     getNextActivityId,
+    animateSelectedActivity,
   } = useMap();
 
   const { activitiesLoading } = useActivityStore();
@@ -140,6 +141,7 @@ export default function Home() {
               fitBoundsOfSelectedActivity={fitBoundsOfSelectedActivity}
               getPreviousActivityId={getPreviousActivityId}
               getNextActivityId={getNextActivityId}
+              animateSelectedActivity={animateSelectedActivity}
             />
           </>
         )}

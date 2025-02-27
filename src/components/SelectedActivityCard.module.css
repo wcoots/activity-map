@@ -27,12 +27,8 @@
 }
 
 .title {
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-
-.titleMobile {
-  width: calc(100svw - 100px);
+  white-space: normal;
+  word-break: break-word;
 }
 
 .subtitle {
@@ -40,11 +36,14 @@
   color: #666;
   white-space: normal;
   word-break: break-word;
-  width: 248px;
 }
 
-.subtitleMobile {
-  width: calc(100svw - 100px);
+.headerButtons {
+  display: flex;
+  position: absolute;
+  right: 24px;
+  bottom: 70px;
+  gap: 12px;
 }
 
 .activityButtons {

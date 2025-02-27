@@ -7,6 +7,7 @@ import "@ant-design/v5-patch-for-react-19";
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
+  CaretRightOutlined,
   EyeFilled,
 } from "@ant-design/icons";
 import { Button, Card } from "antd";
@@ -27,10 +28,12 @@ export default function SelectedActivityCard({
   fitBoundsOfSelectedActivity,
   getPreviousActivityId,
   getNextActivityId,
+  animateSelectedActivity,
 }: {
   fitBoundsOfSelectedActivity(activityId?: number): void;
   getPreviousActivityId(): number | null;
   getNextActivityId(): number | null;
+  animateSelectedActivity(): void;
 }) {
   const { selectedActivityId, activities, filteredActivityIds } =
     useActivityStore();
@@ -50,32 +53,10 @@ export default function SelectedActivityCard({
   const header = (
     <div className={styles.header}>
       <div>
-        <div
-          className={classNames(styles.title, {
-            [styles.titleMobile]: isMobile(),
-          })}
-        >
-          {selectedActivity.name}
-        </div>
-        {location && (
-          <div
-            className={classNames(styles.subtitle, {
-              [styles.subtitleMobile]: isMobile(),
-            })}
-          >
-            {location}
-          </div>
-        )}
+        <div className={styles.title}>{selectedActivity.name}</div>
+        {location && <div className={styles.subtitle}>{location}</div>}
         <div className={styles.subtitle}>{date}</div>
       </div>
-      <Button
-        type="primary"
-        color="default"
-        variant="outlined"
-        size="middle"
-        icon={<EyeFilled />}
-        onClick={() => fitBoundsOfSelectedActivity()}
-      />
     </div>
   );
 
@@ -115,6 +96,27 @@ export default function SelectedActivityCard({
             {formatElevation(selectedActivity.totalElevationGain, unitSystem)}
           </>
         )}
+        <div className={styles.headerButtons}>
+          <Button
+            type="primary"
+            color="default"
+            variant="outlined"
+            size="middle"
+            icon={<CaretRightOutlined />}
+            onClick={() => {
+              fitBoundsOfSelectedActivity();
+              animateSelectedActivity();
+            }}
+          />
+          <Button
+            type="primary"
+            color="default"
+            variant="outlined"
+            size="middle"
+            icon={<EyeFilled />}
+            onClick={() => fitBoundsOfSelectedActivity()}
+          />
+        </div>
         <div className={styles.activityButtons}>
           <Button
             type="primary"
