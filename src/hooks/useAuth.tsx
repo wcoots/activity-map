@@ -228,8 +228,9 @@ export function useAuth() {
         });
         if (!response.ok) return;
 
-        const activity: RawActivity = await response.json();
-        const { polyline } = activity.map;
+        const result: RawActivity | null = await response.json();
+        if (!result) return;
+        const { polyline } = result.map;
 
         if (polyline) {
           setActivities(
