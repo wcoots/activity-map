@@ -47,7 +47,7 @@ export function useMap() {
 
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<Map | null>(null);
-  const europeBounds = new LngLatBounds([-10, 38], [25, 58]);
+  const europeBounds = new LngLatBounds([-12, 35], [45, 65]);
   const animationFrameId = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
