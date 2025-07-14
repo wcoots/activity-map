@@ -6,12 +6,13 @@ import mapboxgl, {
   GeoJSONSource,
   LineLayerSpecification,
   LngLatBounds,
+  LngLatLike,
   Map,
   PaddingOptions,
 } from "mapbox-gl";
 
 import { activitiesConfig, themeConfig } from "@/configs";
-import { useActivities, useAuth } from "@/hooks";
+import { useActivities, useAuth, useUrlHash } from "@/hooks";
 import { useActivityStore, useMapStore } from "@/store";
 import { isMobile, createFeatureCollection } from "@/utils";
 
@@ -44,11 +45,13 @@ export function useMap() {
   const { filterActivities, getNextActivityId, getPreviousActivityId } =
     useActivities();
   const { contextHolder } = useAuth();
+  const { extractHashParameters, updateUrlHash } = useUrlHash();
 
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<Map | null>(null);
   const europeBounds = new LngLatBounds([-12, 35], [45, 65]);
   const animationFrameId = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { hashLatitude, hashLongitude, hashZoom } = extractHashParameters();
 
   const {
     activitiesLoading,
@@ -294,6 +297,8 @@ export function useMap() {
   function fitBoundsOfActivities(initialFit = false) {
     if (!map.current) return;
 
+    if (initialFit && hashLatitude && hashLongitude && hashZoom) return;
+
     const filteredActivities = activities.filter((activity) =>
       filteredActivityIds.includes(activity.id)
     );
@@ -463,11 +468,18 @@ export function useMap() {
 
       mapboxgl.accessToken = process.env.MAPBOX_API_KEY!;
 
+      const initialCentre: LngLatLike =
+        hashLatitude && hashLongitude
+          ? [hashLongitude, hashLatitude]
+          : [-4, 54.2];
+
+      const initialZoom = hashZoom ? hashZoom : 5;
+
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: themeConfig[theme].style,
-        center: [-4, 54.2],
-        zoom: 5,
+        center: initialCentre,
+        zoom: initialZoom,
         attributionControl: false,
       });
 
@@ -496,7 +508,40 @@ export function useMap() {
         setMapLoading(false);
       });
     },
-    [theme, activities, setHoveredActivityId, createMapLayers, setMapLoading]
+    [
+      theme,
+      hashLatitude,
+      hashLongitude,
+      hashZoom,
+      activities,
+      setHoveredActivityId,
+      createMapLayers,
+      setMapLoading,
+    ]
+  );
+
+  useEffect(
+    function updateUrlHashParameters() {
+      if (!map.current) return;
+
+      function update() {
+        if (!map.current) return;
+        const { lng, lat } = map.current.getCenter();
+        const zoom = map.current.getZoom();
+        updateUrlHash(lat, lng, zoom);
+      }
+
+      map.current.on("moveend", update);
+      map.current.on("zoomend", update);
+
+      return () => {
+        if (map.current) {
+          map.current.off("moveend", update);
+          map.current.off("zoomend", update);
+        }
+      };
+    },
+    [updateUrlHash]
   );
 
   useEffect(
