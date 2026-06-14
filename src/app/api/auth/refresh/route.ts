@@ -1,12 +1,14 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-
-const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID!;
-const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET!;
+import {
+  REFRESH_TOKEN_COOKIE,
+  refreshStravaToken,
+  setTokenCookies,
+} from "../../utils";
 
 export async function GET() {
-  const { get: getCookie } = await cookies();
-  const refreshToken = getCookie("strava_refresh_token")?.value;
+  const cookieStore = await cookies();
+  const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value;
 
   if (!refreshToken) {
     return NextResponse.json(
@@ -15,45 +17,14 @@ export async function GET() {
     );
   }
 
-  try {
-    const response = await fetch("https://www.strava.com/oauth/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: STRAVA_CLIENT_ID,
-        client_secret: STRAVA_CLIENT_SECRET,
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-      }),
-    });
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: "Failed to refresh token" },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-
-    const res = NextResponse.json({ success: true });
-
-    res.cookies.set("strava_access_token", data.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: data.expires_in,
-    });
-    res.cookies.set("strava_refresh_token", data.refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 30,
-    });
-
-    return res;
-  } catch {
+  const data = await refreshStravaToken(refreshToken);
+  if (!data) {
     return NextResponse.json(
-      { error: "Token refresh failed" },
-      { status: 500 }
+      { error: "Failed to refresh token" },
+      { status: 401 }
     );
   }
+
+  setTokenCookies(cookieStore, data);
+  return NextResponse.json({ success: true });
 }
