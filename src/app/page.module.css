@@ -47,3 +47,9 @@
   top: 20px;
   right: 20px;
 }
+
+.fitBoundsButton {
+  position: absolute;
+  top: 72px;
+  right: 20px;
+}
