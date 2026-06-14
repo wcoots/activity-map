@@ -2,6 +2,7 @@
 
 import "@ant-design/v5-patch-for-react-19";
 import {
+  CompressOutlined,
   LoadingOutlined,
   MoonFilled,
   SettingFilled,
@@ -130,6 +131,22 @@ export default function Home() {
                 size="large"
                 icon={<SettingFilled />}
                 onClick={() => setSettingsOpen(true)}
+              />
+            </Tooltip>
+
+            <Tooltip
+              placement="left"
+              title={isMobile() ? null : "fit to activities"}
+              arrow={false}
+            >
+              <Button
+                className={styles.fitBoundsButton}
+                type="primary"
+                color="primary"
+                variant="solid"
+                size="large"
+                icon={<CompressOutlined />}
+                onClick={() => fitBoundsOfActivities()}
               />
             </Tooltip>
 

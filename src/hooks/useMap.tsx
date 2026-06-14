@@ -15,6 +15,7 @@ import { activitiesConfig, themeConfig } from "@/configs";
 import { useActivities, useAuth, useUrlHash } from "@/hooks";
 import { useActivityStore, useMapStore } from "@/store";
 import { isMobile, createFeatureCollection } from "@/utils";
+import { Activity } from "@/types";
 
 enum SourceIds {
   ActivitySource = "activity-source",
@@ -49,7 +50,6 @@ export function useMap() {
 
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<Map | null>(null);
-  const europeBounds = new LngLatBounds([-12, 35], [45, 65]);
   const animationFrameId = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { hashLatitude, hashLongitude, hashZoom } = extractHashParameters();
 
@@ -294,6 +294,26 @@ export function useMap() {
     [theme, activities]
   );
 
+  function activitiesInTopCountry(candidates: Activity[]): Activity[] {
+    const counts: Record<string, number> = {};
+    candidates.forEach((activity) => {
+      const country = activity.location?.country;
+      if (!country) return;
+      counts[country] = (counts[country] ?? 0) + 1;
+    });
+
+    const countries = Object.keys(counts);
+    if (!countries.length) return candidates;
+
+    const topCountry = countries.reduce((top, country) =>
+      counts[country] > counts[top] ? country : top
+    );
+
+    return candidates.filter(
+      (activity) => activity.location?.country === topCountry
+    );
+  }
+
   function fitBoundsOfActivities(initialFit = false) {
     if (!map.current) return;
 
@@ -305,41 +325,24 @@ export function useMap() {
 
     if (!filteredActivities.length) return;
 
-    const longitudes = filteredActivities.flatMap((activity) => [
+    const activitiesToFit = initialFit
+      ? activitiesInTopCountry(filteredActivities)
+      : filteredActivities;
+
+    const longitudes = activitiesToFit.flatMap((activity) => [
       activity.bounds.getNorthEast().lng,
       activity.bounds.getSouthWest().lng,
     ]);
 
-    const latitudes = filteredActivities.flatMap((activity) => [
+    const latitudes = activitiesToFit.flatMap((activity) => [
       activity.bounds.getNorthEast().lat,
       activity.bounds.getSouthWest().lat,
     ]);
 
-    const maxLongitude = Math.max(...longitudes);
-    const minLongitude = Math.min(...longitudes);
-    const maxLatitude = Math.max(...latitudes);
-    const minLatitude = Math.min(...latitudes);
-
     const bounds = new LngLatBounds(
-      [maxLongitude, maxLatitude],
-      [minLongitude, minLatitude]
+      [Math.max(...longitudes), Math.max(...latitudes)],
+      [Math.min(...longitudes), Math.min(...latitudes)]
     );
-
-    if (initialFit) {
-      if (
-        maxLatitude > europeBounds.getNorth() ||
-        maxLongitude > europeBounds.getEast()
-      ) {
-        bounds.setNorthEast(europeBounds.getNorthEast());
-      }
-
-      if (
-        minLatitude < europeBounds.getSouth() ||
-        minLongitude < europeBounds.getWest()
-      ) {
-        bounds.setSouthWest(europeBounds.getSouthWest());
-      }
-    }
 
     map.current.fitBounds(bounds, { padding: 50 });
   }
@@ -471,9 +474,9 @@ export function useMap() {
       const initialCentre: LngLatLike =
         hashLatitude && hashLongitude
           ? [hashLongitude, hashLatitude]
-          : [-4, 54.2];
+          : [-2.4659, 54.5815];
 
-      const initialZoom = hashZoom ? hashZoom : 5;
+      const initialZoom = hashZoom ? hashZoom : 4.96;
 
       map.current = new mapboxgl.Map({
         container: mapContainer.current,

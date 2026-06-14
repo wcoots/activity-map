@@ -33,7 +33,6 @@ export default function SettingsDrawer({
 }) {
   const { athlete, isVisitorMode } = useAuthStore();
   const {
-    selectedActivityId,
     activityTypeSettings,
     highestDistance,
     keywordText,
@@ -126,10 +125,7 @@ export default function SettingsDrawer({
       title={header}
       footer={footer}
       open={settingsOpen}
-      onClose={() => {
-        setSettingsOpen(false);
-        if (!selectedActivityId) fitBoundsOfActivities();
-      }}
+      onClose={() => setSettingsOpen(false)}
     >
       <h3>Activity Types</h3>
       <div className={styles.checkboxes}>
